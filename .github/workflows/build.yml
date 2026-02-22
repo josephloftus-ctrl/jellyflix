@@ -21,6 +21,9 @@ jobs:
     - name: Show Xcode version
       run: xcodebuild -version
 
+    - name: Install tvOS simulator runtime
+      run: xcodebuild -downloadPlatform tvOS
+
     - name: Resolve Swift packages
       run: |
         xcodebuild -resolvePackageDependencies \
