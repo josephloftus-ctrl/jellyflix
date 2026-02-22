@@ -56,6 +56,7 @@
 				APIs/APIBasicNetwork.swift,
 				APIs/APIStorage.swift,
 				APIs/APIUserStorage.swift,
+				APIs/ConduitClient.swift,
 				Extensions/DecoderExtension.swift,
 				Extensions/TimeIntervalExtension.swift,
 				Extensions/URLExtension.swift,

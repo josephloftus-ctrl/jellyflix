@@ -14,6 +14,7 @@ struct AddServerView: View {
     @State private var httpPort: String = "8096"
     @State private var username: String = ""
     @State private var password: String = ""
+    @State private var conduitURL: String = ""
     @State private var error: RError?
     @State private var errorSummary: String = ""
     @State private var awaitingLogin: Bool = false
@@ -44,6 +45,7 @@ struct AddServerView: View {
                 TextField("Username", text: $username)
                 SecureField("Password", text: $password)
             }
+            TextField("Conduit URL (optional)", text: $conduitURL)
             if let error = self.error {
                 ErrorView(error: error, summary: self.errorSummary)
                     .padding(.vertical)
@@ -69,16 +71,19 @@ struct AddServerView: View {
             }
             switch defaultUser.serviceType {
             case .Jellyfin(let userJellyfin):
-                loggedIn = .loggedIn(
-                    JellyfinModel(
-                        userDisplayName: defaultUser.displayName,
-                        userID: defaultUser.id,
-                        serviceID: defaultUser.serviceID,
-                        accessToken: userJellyfin.accessToken,
-                        sessionID: userJellyfin.sessionID,
-                        serviceURL: defaultUser.serviceURL
-                    )
+                let model = JellyfinModel(
+                    userDisplayName: defaultUser.displayName,
+                    userID: defaultUser.id,
+                    serviceID: defaultUser.serviceID,
+                    accessToken: userJellyfin.accessToken,
+                    sessionID: userJellyfin.sessionID,
+                    serviceURL: defaultUser.serviceURL
                 )
+                var client: ConduitClient?
+                if let conduit = defaultUser.conduitURL {
+                    client = ConduitClient(baseURL: conduit)
+                }
+                loggedIn = .loggedIn(model, conduitClient: client)
             }
         }
     }
@@ -111,8 +116,17 @@ struct AddServerView: View {
         Task {
             awaitingLogin = true
             do {
-                let streamingService = try await JellyfinModel.login(url: url, username: username, password: password)
-                self.loggedIn = .loggedIn(streamingService)
+                let streamingService = try await JellyfinModel.login(
+                    url: url,
+                    username: username,
+                    password: password,
+                    conduitURL: conduitURL.isEmpty ? nil : URL(string: conduitURL)
+                )
+                var client: ConduitClient?
+                if let conduit = URL(string: conduitURL), !conduitURL.isEmpty {
+                    client = ConduitClient(baseURL: conduit)
+                }
+                self.loggedIn = .loggedIn(streamingService, conduitClient: client)
             } catch let error as RError {
                 self.error = AccountErrors.loginFailed(error)
                 if let netErr = error.last() as? NetworkError {

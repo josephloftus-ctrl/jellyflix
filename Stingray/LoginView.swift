@@ -49,7 +49,7 @@ struct LoginView: View {
     
     func setupUser() {
         switch loggedIn {
-        case .loggedIn(let streamingService):
+        case .loggedIn(let streamingService, _):
             Task {
                 do {
                     let streamingService = try await JellyfinModel.login(

@@ -178,7 +178,7 @@ public final class JellyfinModel: StreamingServiceProtocol {
     ///   - username: Signin username.
     ///   - password: Signin password.
     /// - Returns: The configured Jellyfin model.
-    static func login(url: URL, username: String, password: String) async throws(AccountErrors) -> JellyfinModel {
+    static func login(url: URL, username: String, password: String, conduitURL: URL? = nil) async throws(AccountErrors) -> JellyfinModel {
         let networkAPI = JellyfinAdvancedNetwork(network: JellyfinBasicNetwork(address: url))
         do {
             let response = try await networkAPI.login(username: username, password: password)
@@ -190,7 +190,8 @@ public final class JellyfinModel: StreamingServiceProtocol {
                     ),
                     serviceID: response.serverId,
                     id: response.userId,
-                    displayName: response.userName
+                    displayName: response.userName,
+                    conduitURL: conduitURL
                 )
             )
             UserModel.shared.setDefaultUser(userID: response.userId)

@@ -67,6 +67,8 @@ public final class SlimMedia: SlimMediaProtocol, Decodable {
     public var title: String
     public var imageTags: (any MediaImagesProtocol)?
     public var imageBlurHashes: (any MediaImageBlurHashesProtocol)?
+    /// A short description of this media.
+    public var overview: String?
     /// A useful ID for linking this object with the full-sized `MediaModel` object.
     public var parentID: String?
     public var errors: [any RError]?
@@ -80,6 +82,7 @@ public final class SlimMedia: SlimMediaProtocol, Decodable {
         case imageTags = "ImageTags"
         case parentID = "ParentId"
         case parentPrimaryImage = "SeriesPrimaryImageTag"
+        case overview = "Overview"
     }
     
     /// Create a `SlimMedia` from JSON.
@@ -146,7 +149,16 @@ public final class SlimMedia: SlimMediaProtocol, Decodable {
             errLabel: "Slim Media",
             required: false
         )
-        
+
+        self.overview = container.decodeFieldSafely(
+            String?.self,
+            forKey: .overview,
+            default: nil,
+            errBucket: &errBucket,
+            errLabel: "Slim Media",
+            required: false
+        )
+
         if !errBucket.isEmpty { errors = errBucket } // Otherwise nil
     }
     
