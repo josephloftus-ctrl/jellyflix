@@ -12,23 +12,28 @@ enum LoginState {
     /// All users are logged out
     case loggedOut
     /// There is at least one user signed in
-    case loggedIn(any StreamingServiceProtocol)
+    case loggedIn(any StreamingServiceProtocol, conduitClient: ConduitClient? = nil)
 }
 
 struct ContentView: View {
     @State var loginState: LoginState = .loggedOut
     @State var deepLinkRequest: DeepLinkRequest?
-    
+
     var body: some View {
         switch loginState {
         case .loggedOut:
             AddServerView(loggedIn: $loginState)
                 .padding(128)
-        case .loggedIn(let streamingService):
-            DashboardView(streamingService: streamingService, deepLinkRequest: $deepLinkRequest, loggedIn: $loginState)
-                .onOpenURL { url in
-                    handleDeepLink(url: url)
-                }
+        case .loggedIn(let streamingService, let conduitClient):
+            DashboardView(
+                streamingService: streamingService,
+                conduitClient: conduitClient,
+                deepLinkRequest: $deepLinkRequest,
+                loggedIn: $loginState
+            )
+            .onOpenURL { url in
+                handleDeepLink(url: url)
+            }
         }
     }
     

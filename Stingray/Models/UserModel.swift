@@ -145,14 +145,16 @@ public struct User: Codable, Identifiable {
     let displayName: String
     var usesSubtitles: Bool // Set default as false
     var bitrate: Int?
-    
+    var conduitURL: URL?
+
     init(
         serviceURL: URL,
         serviceType: ServiceType,
         serviceID: String,
         id: String,
         displayName: String,
-        usesSubtitles: Bool = false
+        usesSubtitles: Bool = false,
+        conduitURL: URL? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -160,6 +162,7 @@ public struct User: Codable, Identifiable {
         self.serviceType = serviceType
         self.serviceID = serviceID
         self.usesSubtitles = usesSubtitles
+        self.conduitURL = conduitURL
     }
     
     /// Create a user from encoded JSON.
@@ -176,6 +179,7 @@ public struct User: Codable, Identifiable {
             
             usesSubtitles = try container.decodeIfPresent(Bool.self, forKey: .usesSubtitles) ?? false
             bitrate = try container.decodeIfPresent(Int.self, forKey: .bitrate)
+            conduitURL = try container.decodeIfPresent(URL.self, forKey: .conduitURL)
         }
         catch DecodingError.keyNotFound(let key, _) { throw JSONError.missingKey(key.stringValue, "User") }
         catch DecodingError.valueNotFound(_, let context) {

@@ -120,6 +120,12 @@ public protocol AdvancedNetworkProtocol {
     ///   - accessToken: Access token for the server
     /// - Returns: Special features
     func loadSpecialFeatures(mediaID: String, accessToken: String) async throws(AdvancedNetworkErrors) -> [SpecialFeature]
+    /// Fetches media items by their IDs
+    /// - Parameters:
+    ///   - accessToken: Access token for the server
+    ///   - ids: Array of item IDs to fetch
+    /// - Returns: Slim media items
+    func getItemsByIds(accessToken: String, ids: [String]) async throws(AdvancedNetworkErrors) -> [SlimMedia]
 }
 
 public enum LibraryMediaSortOrder: String {
@@ -375,10 +381,9 @@ final class JellyfinAdvancedNetwork: AdvancedNetworkProtocol {
     func getSeasonMedia(accessToken: String, seasonID: String) async throws(LibraryErrors) -> [TVSeason] {
         struct Root: Decodable {
             let items: [TVSeason]
-            
-            init(from decoder: Decoder) throws(JSONError) {
-                do { self.items = try TVSeason.decodeSeasons(from: decoder) }
-                catch { throw JSONError.failedJSONDecode("Season Media Root", error) }
+
+            init(from decoder: Decoder) throws {
+                self.items = try TVSeason.decodeSeasons(from: decoder)
             }
         }
         
@@ -550,7 +555,7 @@ final class JellyfinAdvancedNetwork: AdvancedNetworkProtocol {
             positionTicks: playbackPosition,
             playSessionID: playSessionID,
             userSessionID: userSessionID,
-            isPaused: isPaused,
+            isPaused: isPaused
         )
         
         do {
@@ -631,6 +636,32 @@ final class JellyfinAdvancedNetwork: AdvancedNetworkProtocol {
                 body: nil
             )
         } catch { throw AdvancedNetworkErrors.failedSpecialFeatures(error) }
+    }
+
+    func getItemsByIds(accessToken: String, ids: [String]) async throws(AdvancedNetworkErrors) -> [SlimMedia] {
+        struct Root: Decodable {
+            let Items: [SlimMedia]
+        }
+
+        let params: [URLQueryItem] = [
+            URLQueryItem(name: "ids", value: ids.joined(separator: ",")),
+            URLQueryItem(name: "fields", value: "Overview,Genres,CommunityRating,ParentId"),
+            URLQueryItem(name: "enableUserData", value: "true"),
+            URLQueryItem(name: "enableImages", value: "true")
+        ]
+
+        do {
+            let root: Root = try await network.request(
+                verb: .get,
+                path: "/Items",
+                headers: ["X-MediaBrowser-Token": accessToken],
+                urlParams: params,
+                body: nil
+            )
+            return root.Items
+        } catch {
+            throw AdvancedNetworkErrors.failedRecentlyAdded(error)
+        }
     }
 }
 

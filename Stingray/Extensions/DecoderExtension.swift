@@ -24,7 +24,7 @@ extension KeyedDecodingContainer {
         default defaultValue: T,
         errBucket: inout [RError],
         errLabel: String,
-        required: Bool = true,
+        required: Bool = true
     ) -> T {
         do {
             return try decodeIfPresent(type, forKey: key) ?? {

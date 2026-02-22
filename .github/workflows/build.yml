@@ -21,25 +21,33 @@ jobs:
     - name: Show Xcode version
       run: xcodebuild -version
 
+    - name: Install tvOS simulator runtime
+      run: xcodebuild -downloadPlatform tvOS
+
     - name: Resolve Swift packages
       run: |
         xcodebuild -resolvePackageDependencies \
           -project Stingray.xcodeproj \
-          -scheme Stingray
+          -scheme Stingray \
+          -skipPackagePluginValidation
 
     - name: Build Archive (Unsigned)
       run: |
+        set -o pipefail
         xcodebuild archive \
           -project Stingray.xcodeproj \
           -scheme Stingray \
           -archivePath build/Jellyflix.xcarchive \
           -destination 'generic/platform=tvOS' \
           -configuration Release \
+          -skipPackagePluginValidation \
+          -allowProvisioningUpdates \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           DEVELOPMENT_TEAM="" \
           PROVISIONING_PROFILE_SPECIFIER="" \
+          ENABLE_PREVIEWS=NO \
           2>&1 | tee build.log
 
     - name: Show build errors
@@ -51,8 +59,15 @@ jobs:
 
     - name: Create Unsigned IPA
       run: |
+        APP_PATH=$(find build/Jellyflix.xcarchive -name "*.app" -type d | head -1)
+        echo "Found .app at: $APP_PATH"
+        if [ -z "$APP_PATH" ]; then
+          echo "ERROR: No .app bundle found in archive"
+          find build/Jellyflix.xcarchive -type d | head -20
+          exit 1
+        fi
         mkdir -p build/Payload
-        cp -r build/Jellyflix.xcarchive/Products/Applications/Stingray.app build/Payload/
+        cp -r "$APP_PATH" build/Payload/
         cd build
         zip -r Jellyflix-unsigned.ipa Payload
         rm -rf Payload

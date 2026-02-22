@@ -102,6 +102,10 @@ public struct UserView: View {
         
         switch user.serviceType {
         case .Jellyfin(let jellyfinData):
+            var client: ConduitClient?
+            if let conduit = user.conduitURL {
+                client = ConduitClient(baseURL: conduit)
+            }
             self.loggedIn = .loggedIn(
                 JellyfinModel(
                     userDisplayName: user.displayName,
@@ -110,7 +114,8 @@ public struct UserView: View {
                     accessToken: jellyfinData.accessToken,
                     sessionID: jellyfinData.sessionID,
                     serviceURL: user.serviceURL
-                )
+                ),
+                conduitClient: client
             )
             self.users.setDefaultUser(userID: user.id)
         }
