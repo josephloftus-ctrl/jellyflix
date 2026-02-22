@@ -1,0 +1,72 @@
+name: Build tvOS App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+    - name: Show Xcode version
+      run: xcodebuild -version
+
+    - name: Resolve Swift packages
+      run: |
+        xcodebuild -resolvePackageDependencies \
+          -project Stingray.xcodeproj \
+          -scheme Stingray
+
+    - name: Build Archive (Unsigned)
+      run: |
+        xcodebuild archive \
+          -project Stingray.xcodeproj \
+          -scheme Stingray \
+          -archivePath build/Jellyflix.xcarchive \
+          -destination 'generic/platform=tvOS' \
+          -configuration Release \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          DEVELOPMENT_TEAM="" \
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          2>&1 | tee build.log
+
+    - name: Show build errors
+      if: failure()
+      run: |
+        echo "=== BUILD ERRORS ==="
+        grep -E "error:|warning:" build.log | head -50 || echo "No errors found in grep"
+        echo "=== END ERRORS ==="
+
+    - name: Create Unsigned IPA
+      run: |
+        mkdir -p build/Payload
+        cp -r build/Jellyflix.xcarchive/Products/Applications/Stingray.app build/Payload/
+        cd build
+        zip -r Jellyflix-unsigned.ipa Payload
+        rm -rf Payload
+
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jellyflix-unsigned-ipa
+        path: build/Jellyflix-unsigned.ipa
+        retention-days: 30
+
+    - name: Upload Archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: Jellyflix-xcarchive
+        path: build/Jellyflix.xcarchive
+        retention-days: 30
