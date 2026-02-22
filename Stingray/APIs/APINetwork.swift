@@ -556,7 +556,7 @@ final class JellyfinAdvancedNetwork: AdvancedNetworkProtocol {
             positionTicks: playbackPosition,
             playSessionID: playSessionID,
             userSessionID: userSessionID,
-            isPaused: isPaused,
+            isPaused: isPaused
         )
         
         do {

@@ -332,7 +332,7 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             id: id,
             onStartPiP: self.onStartPiP,
             onRestoreFromPiP: self.onRestoreFromPiP,
-            onStopFromPiP: self.onStopFromPiP,
+            onStopFromPiP: self.onStopFromPiP
         )
         
         // Should we kill the current PiP stream because the user is now watching something new?
@@ -402,7 +402,7 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             id: String,
             onStartPiP: @escaping () -> Void,
             onRestoreFromPiP: @escaping () -> Void,
-            onStopFromPiP: @escaping () -> Void,
+            onStopFromPiP: @escaping () -> Void
         ) {
             self.id = id
             self.onStartPiP = onStartPiP
