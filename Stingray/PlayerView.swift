@@ -298,19 +298,11 @@ fileprivate struct MaterialEffectModifier: ViewModifier {
     let radius = 24.0
     
     func body(content: Content) -> some View {
-        if #available(tvOS 26.0, *) {
-            content
-                .padding(padding)
-                .glassEffect(.regular, in: .rect(cornerRadius: radius))
-                .padding(-padding)
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-        } else {
-            content
-                .padding(padding)
-                .background(.ultraThinMaterial, in: .rect(cornerRadius: radius))
-                .padding(-padding)
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-        }
+        content
+            .padding(padding)
+            .background(.ultraThinMaterial, in: .rect(cornerRadius: radius))
+            .padding(-padding)
+            .clipShape(RoundedRectangle(cornerRadius: radius))
     }
 }
 

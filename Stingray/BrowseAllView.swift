@@ -55,8 +55,10 @@ struct BrowseAllView: View {
                             Text(genre)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
+                                .background(selectedGenre == genre ? Color.accentColor : Color.gray.opacity(0.3))
+                                .clipShape(Capsule())
                         }
-                        .buttonStyle(selectedGenre == genre ? .borderedProminent : .bordered)
+                        .buttonStyle(.card)
                     }
                 }
                 .padding(.horizontal, 48)

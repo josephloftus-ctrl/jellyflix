@@ -215,7 +215,7 @@ final class PlayerViewModel: Hashable {
                                 self.mediaSource.startPoint = 0
                             }
                             
-                            print(self.mediaSource.startPoint, self.mediaSource.duration * 0.1, self.mediaSource.duration * 0.9, )
+                            print(self.mediaSource.startPoint, self.mediaSource.duration * 0.1, self.mediaSource.duration * 0.9)
                         }
                     }
                 }
