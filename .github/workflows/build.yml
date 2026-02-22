@@ -35,14 +35,16 @@ jobs:
           -project Stingray.xcodeproj \
           -scheme Stingray \
           -archivePath build/Jellyflix.xcarchive \
-          -sdk appletvos \
+          -destination 'generic/platform=tvOS' \
           -configuration Release \
           -skipPackagePluginValidation \
+          -allowProvisioningUpdates \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           DEVELOPMENT_TEAM="" \
           PROVISIONING_PROFILE_SPECIFIER="" \
+          ENABLE_PREVIEWS=NO \
           2>&1 | tee build.log
 
     - name: Show build errors
