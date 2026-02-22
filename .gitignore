@@ -63,3 +63,6 @@ fastlane/test_output
 
 #macOS files
 .DS_Store
+
+# Worktrees
+.worktrees/
