@@ -25,16 +25,19 @@ jobs:
       run: |
         xcodebuild -resolvePackageDependencies \
           -project Stingray.xcodeproj \
-          -scheme Stingray
+          -scheme Stingray \
+          -skipPackagePluginValidation
 
     - name: Build Archive (Unsigned)
       run: |
+        set -o pipefail
         xcodebuild archive \
           -project Stingray.xcodeproj \
           -scheme Stingray \
           -archivePath build/Jellyflix.xcarchive \
           -destination 'generic/platform=tvOS' \
           -configuration Release \
+          -skipPackagePluginValidation \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
@@ -53,6 +56,11 @@ jobs:
       run: |
         APP_PATH=$(find build/Jellyflix.xcarchive -name "*.app" -type d | head -1)
         echo "Found .app at: $APP_PATH"
+        if [ -z "$APP_PATH" ]; then
+          echo "ERROR: No .app bundle found in archive"
+          find build/Jellyflix.xcarchive -type d | head -20
+          exit 1
+        fi
         mkdir -p build/Payload
         cp -r "$APP_PATH" build/Payload/
         cd build
