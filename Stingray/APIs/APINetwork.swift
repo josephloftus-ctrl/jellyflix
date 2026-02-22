@@ -381,10 +381,9 @@ final class JellyfinAdvancedNetwork: AdvancedNetworkProtocol {
     func getSeasonMedia(accessToken: String, seasonID: String) async throws(LibraryErrors) -> [TVSeason] {
         struct Root: Decodable {
             let items: [TVSeason]
-            
-            init(from decoder: Decoder) throws(JSONError) {
-                do { self.items = try TVSeason.decodeSeasons(from: decoder) }
-                catch { throw JSONError.failedJSONDecode("Season Media Root", error) }
+
+            init(from decoder: Decoder) throws {
+                self.items = try TVSeason.decodeSeasons(from: decoder)
             }
         }
         
