@@ -686,7 +686,6 @@ fileprivate struct EpisodeNavigationView: View {
 
 // MARK: Actor Photo
 fileprivate struct ActorImage: View {
-    let media: any MediaProtocol
     let streamingService: any StreamingServiceProtocol
     let person: any MediaPersonProtocol
 
@@ -752,7 +751,7 @@ public struct PeopleBrowserView: View {
                 ForEach(Array(media.people.enumerated()), id: \.element.id) { index, person in
                     Button { /* Temp Workaround */ } label: {
                         VStack {
-                            ActorImage(media: media, streamingService: streamingService, person: person)
+                            ActorImage(streamingService: streamingService, person: person)
                                 .frame(width: 200, height: 300)
                             Text(person.name)
                                 .multilineTextAlignment(.center)
