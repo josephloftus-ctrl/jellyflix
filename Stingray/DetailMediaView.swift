@@ -797,7 +797,8 @@ public struct SpecialFeaturesView: View {
                         catch {}
                     }
             case .loading:
-                ProgressView("Loading special features...")
+                ProgressView()
+                    .frame(maxWidth: .infinity, minHeight: 200)
             case .loaded(let rows):
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                     SpecialFeaturesRow(streamingService: streamingService, rowData: row, media: media, navigation: $navigation)
