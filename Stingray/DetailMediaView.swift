@@ -435,7 +435,6 @@ fileprivate struct PlayNavigationView: View {
                 }
             }
         }
-        .onAppear { self.focus = .play }
         .focused($focus, equals: .play)
         .id("Play-button")
         .defaultFocus($focus, .play, priority: .userInitiated)
