@@ -592,52 +592,51 @@ fileprivate struct EpisodeView: View {
             Button {
                 self.showDetails = episode.overview != nil
             } label: {
-                VStack(alignment: .leading) {
-                    // Season and episode number
-                    HStack(spacing: 0) {
-                        if let season = (seasons.first { $0.episodes.contains { $0.id == episode.id } }) {
-                            Text("\(season.title), ")
-                        }
-                        Text("Episode \(episode.episodeNumber)")
-                        Spacer()
-                    }
-                    .opacity(episode.overview != nil ? 0.5 : 1)
-                    
-                    if let overview = episode.overview {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(overview)
-                                .lineLimit(5)
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                        }
-                        .sheet(isPresented: $showDetails) {
-                            VStack {
-                                Spacer()
-                                MediaLogoView(
-                                    media: media,
-                                    logoImageURL: streamingService.getImageURL(imageType: .logo, mediaID: media.id, width: 0)
-                                )
-                                .padding()
-                                Spacer()
-                                Text(overview)
-                                    .padding()
-                                Spacer()
-                            }
-                        }
-                    } else {
-                        Text("No Description Available")
-                            .opacity(0.5)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .frame(width: 400, height: 225)
-                .padding(16)
-                .background {
+                ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.white.opacity(isFocused ? 0.1 : 0))
+                    VStack(alignment: .leading) {
+                        // Season and episode number
+                        HStack(spacing: 0) {
+                            if let season = (seasons.first { $0.episodes.contains { $0.id == episode.id } }) {
+                                Text("\(season.title), ")
+                            }
+                            Text("Episode \(episode.episodeNumber)")
+                            Spacer()
+                        }
+                        .opacity(episode.overview != nil ? 0.5 : 1)
+
+                        if let overview = episode.overview {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(overview)
+                                    .lineLimit(5)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 0)
+                            }
+                            .sheet(isPresented: $showDetails) {
+                                VStack {
+                                    Spacer()
+                                    MediaLogoView(
+                                        media: media,
+                                        logoImageURL: streamingService.getImageURL(imageType: .logo, mediaID: media.id, width: 0)
+                                    )
+                                    .padding()
+                                    Spacer()
+                                    Text(overview)
+                                        .padding()
+                                    Spacer()
+                                }
+                            }
+                        } else {
+                            Text("No Description Available")
+                                .opacity(0.5)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(16)
                 }
-                .padding(-16)
+                .frame(width: 400, height: 225)
             }
             .buttonStyle(.plain)
             .focused($isFocused, equals: true)
