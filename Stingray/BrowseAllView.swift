@@ -100,7 +100,7 @@ private struct LibrarySelectorButton: View {
                 .background(isSelected ? StingrayColors.accent : Color.gray.opacity(0.3))
                 .clipShape(Capsule())
         }
-        .buttonStyle(.card)
+        .buttonStyle(.plain)
     }
 }
 
@@ -147,7 +147,7 @@ private struct AllMediaView: View {
                                     .background(selectedGenre == genre ? StingrayColors.accent.opacity(0.6) : Color.gray.opacity(0.2))
                                     .clipShape(Capsule())
                             }
-                            .buttonStyle(.card)
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 48)
