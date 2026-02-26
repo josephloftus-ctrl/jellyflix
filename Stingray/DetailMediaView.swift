@@ -851,7 +851,8 @@ public struct SpecialFeaturesRow: View {
                             } label: {
                                 VStack(spacing: 0) {
                                     ArtView(media: specialFeature, streamingService: self.streamingService)
-                                        .frame(maxHeight: 250)
+                                        .frame(height: 220)
+                                        .clipped()
                                     Spacer(minLength: 0)
                                     Text(mediaSource.name)
                                         .lineLimit(2)
