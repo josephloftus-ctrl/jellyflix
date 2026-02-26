@@ -18,45 +18,51 @@ struct AllLibrariesView: View {
     @State private var selectedGenre: String = "All"
 
     var body: some View {
-        switch streamingService.libraryStatus {
-        case .waiting, .retrieving:
-            VStack(spacing: StingraySpacing.md) {
-                ProgressView()
-                Text("Loading Library...")
-                    .foregroundStyle(StingrayColors.textSecondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Group {
+            switch streamingService.libraryStatus {
+            case .waiting, .retrieving:
+                VStack(spacing: StingraySpacing.md) {
+                    ProgressView()
+                    Text("Loading Library...")
+                        .foregroundStyle(StingrayColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .error(let err):
-            VStack {
-                ErrorView(error: err, summary: "The server formatted the library's metadata unexpectedly.")
-                SystemInfoView(streamingService: streamingService)
-            }
+            case .error(let err):
+                VStack {
+                    ErrorView(error: err, summary: "The server formatted the library's metadata unexpectedly.")
+                    SystemInfoView(streamingService: streamingService)
+                }
 
-        case .available(let libraries), .complete(let libraries):
-            VStack(alignment: .leading, spacing: 0) {
-                LibrarySelectorRow(
-                    libraries: libraries,
-                    selectedLibraryID: $selectedLibraryID,
-                    selectedGenre: $selectedGenre
-                )
-                .focusSection()
-
-                if selectedLibraryID == "all" {
-                    AllMediaView(
+            case .available(let libraries), .complete(let libraries):
+                VStack(alignment: .leading, spacing: 0) {
+                    LibrarySelectorRow(
                         libraries: libraries,
-                        selectedGenre: $selectedGenre,
-                        streamingService: streamingService,
-                        navigation: $navigation
+                        selectedLibraryID: $selectedLibraryID,
+                        selectedGenre: $selectedGenre
                     )
-                } else if let library = libraries.first(where: { $0.id == selectedLibraryID }) {
-                    LibraryView(
-                        library: library,
-                        navigation: $navigation,
-                        streamingService: streamingService
-                    )
+                    .focusSection()
+
+                    if selectedLibraryID == "all" {
+                        AllMediaView(
+                            libraries: libraries,
+                            selectedGenre: $selectedGenre,
+                            streamingService: streamingService,
+                            navigation: $navigation
+                        )
+                    } else if let library = libraries.first(where: { $0.id == selectedLibraryID }) {
+                        LibraryView(
+                            library: library,
+                            navigation: $navigation,
+                            streamingService: streamingService
+                        )
+                    }
                 }
             }
+        }
+        .onChange(of: streamingService.userID) {
+            selectedLibraryID = "all"
+            selectedGenre = "All"
         }
     }
 }
