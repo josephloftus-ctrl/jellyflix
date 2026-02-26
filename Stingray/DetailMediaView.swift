@@ -644,7 +644,6 @@ fileprivate struct EpisodeView: View {
                 .frame(width: 400, height: 225)
             }
             .buttonStyle(.plain)
-            .focused($isFocused, equals: true)
             .focused($focus, equals: .media(episode.id))
         }
     }
