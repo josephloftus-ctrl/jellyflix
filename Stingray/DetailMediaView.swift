@@ -286,7 +286,7 @@ fileprivate struct MediaLogoView: View {
                 } placeholder: {
                     EmptyView()
                 }
-                .frame(width: 400)
+                .frame(maxWidth: 400, maxHeight: 160)
             }
             if !media.tagline.isEmpty {
                 Text(media.tagline)
