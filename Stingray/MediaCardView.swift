@@ -102,17 +102,14 @@ struct MediaCardLoading: View {
 struct MediaCardNoImage: View {
     var body: some View {
         ZStack {
-            Color.gray.opacity(0.15)
-            VStack(spacing: StingraySpacing.xs) {
-                Image(systemName: "photo")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.secondary)
-                    .accessibilityHint("Temporary placeholder for missing image", isEnabled: false)
-                Text("No image available")
-                    .multilineTextAlignment(.center)
-                    .font(StingrayFont.metadata)
-                    .foregroundStyle(.secondary)
-            }
+            LinearGradient(
+                colors: [Color(white: 0.12), Color(white: 0.19)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: "photo")
+                .font(.system(size: 40))
+                .foregroundStyle(.white.opacity(0.25))
         }
     }
 }
