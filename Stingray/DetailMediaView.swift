@@ -206,10 +206,6 @@ public struct DetailMediaView: View {
             .animation(StingrayAnimation.shelfReveal, value: shouldRevealBottomShelf)
         }
         .ignoresSafeArea()
-        .task { // Yep. I hate it too. Apple TVs are having issues selecting the play button if it changes type.
-            try? await Task.sleep(for: .milliseconds(500))
-            self.focus = .play
-        }
         .onChange(of: focus) { _, newValue in
             switch newValue {
             case .media, .season, .overview:
