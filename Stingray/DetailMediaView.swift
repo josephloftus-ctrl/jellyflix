@@ -49,7 +49,7 @@ public struct DetailMediaView: View {
                 PlayNavigationView(focus: $focus, navigation: $navigation, media: media, streamingService: streamingService)
                 .disabled({
                     switch focus {
-                    case .play, .overview, .season, nil:
+                    case .play, .overview, .ratings, .season, nil:
                         return false
                     default:
                         return true
@@ -161,7 +161,7 @@ public struct DetailMediaView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
-                    .focused($focus, equals: .overview)
+                    .focused($focus, equals: .ratings)
                 }
                 .padding(.vertical, {
                     switch self.media.mediaType {
@@ -208,7 +208,7 @@ public struct DetailMediaView: View {
         .ignoresSafeArea()
         .onChange(of: focus) { _, newValue in
             switch newValue {
-            case .media, .season, .overview:
+            case .media, .season, .overview, .ratings:
                 self.shouldBackgroundBlur = true
                 self.shouldRevealBottomShelf = true
             case .play:
@@ -775,6 +775,7 @@ fileprivate enum ButtonType: Hashable {
     case season(String)
     case media(String)
     case overview
+    case ratings
 }
 
 public struct SpecialFeaturesView: View {
