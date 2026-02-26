@@ -753,8 +753,7 @@ public struct PeopleBrowserView: View {
                     Button { /* Temp Workaround */ } label: {
                         VStack {
                             ActorImage(media: media, streamingService: streamingService, person: person)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .frame(width: 300)
+                                .frame(width: 200, height: 300)
                             Text(person.name)
                                 .multilineTextAlignment(.center)
                                 .font(.headline)
