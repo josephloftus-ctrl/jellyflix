@@ -176,7 +176,7 @@ public struct DetailMediaView: View {
                 // People
                 VStack(alignment: .leading, spacing: 3) {
                     Text("People")
-                        .font(.title3.bold())
+                        .font(StingrayFont.sectionTitle)
                         .padding(.top)
                     PeopleBrowserView(media: media, streamingService: streamingService)
                 }
@@ -203,13 +203,12 @@ public struct DetailMediaView: View {
                     .frame(width: titleShadowSize * 2, height: titleShadowSize * 2)
                     .offset(y: titleShadowSize)
             }
-            .animation(.spring(.smooth), value: shouldRevealBottomShelf)
+            .animation(StingrayAnimation.shelfReveal, value: shouldRevealBottomShelf)
         }
         .ignoresSafeArea()
         .task { // Yep. I hate it too. Apple TVs are having issues selecting the play button if it changes type.
-            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
-                self.focus = .play
-            }
+            try? await Task.sleep(for: .milliseconds(500))
+            self.focus = .play
         }
         .onChange(of: focus) { _, newValue in
             switch newValue {
@@ -254,7 +253,7 @@ fileprivate struct MediaBackgroundView: View {
                         .resizable()
                         .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                         .opacity(backgroundOpacity)
-                        .animation(.spring(.smooth), value: backgroundOpacity)
+                        .animation(StingrayAnimation.shelfReveal, value: backgroundOpacity)
                         .onAppear { backgroundOpacity = 1 }
                 } placeholder: {
                     EmptyView()
@@ -263,7 +262,7 @@ fileprivate struct MediaBackgroundView: View {
             // Blurry background
             Color.clear
                 .background(.thinMaterial.opacity(shouldBlurBackground ? 1 : 0))
-                .animation(.smooth(duration: 0.5), value: shouldBlurBackground)
+                .animation(StingrayAnimation.backgroundBlur, value: shouldBlurBackground)
         }
     }
 }
@@ -282,7 +281,7 @@ fileprivate struct MediaLogoView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .opacity(logoOpacity)
-                        .animation(.easeOut(duration: 0.5), value: logoOpacity)
+                        .animation(StingrayAnimation.fadeIn, value: logoOpacity)
                         .onAppear { logoOpacity = 1 }
                 } placeholder: {
                     EmptyView()
@@ -477,7 +476,8 @@ fileprivate struct SeasonSelectorView: View {
                         scrollProxy.scrollTo(firstEpisode.id, anchor: .center)
                     }
                     // Small delay to ensure the view is loaded before transferring focus
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(100))
                         self.focus = .media(firstEpisode.id)
                     }
                 }
@@ -582,7 +582,7 @@ fileprivate struct EpisodeView: View {
             .focused($focus, equals: .media(episode.id))
             .focused($isFocused, equals: true)
             .offset(y: isFocused ? -16 : 0)
-            .animation(.easeOut(duration: 0.5), value: isFocused)
+            .animation(StingrayAnimation.fadeIn, value: isFocused)
             .onMoveCommand { direction in
                 if direction == .up, let seasonID = (seasons.first { $0.episodes.contains { $0.id == episode.id } }?.id) {
                     self.focus = .season(seasonID)
@@ -677,8 +677,8 @@ fileprivate struct EpisodeNavigationView: View {
                     .padding()
                 Spacer(minLength: 0)
             }
-            .frame(width: 400, height: 325)
-            .background(.ultraThinMaterial)
+            .frame(width: StingrayCard.episode.width, height: StingrayCard.episode.height)
+            .glassBackground(cornerRadius: 20, padding: 0)
         }
         .buttonStyle(.card)
     }
@@ -689,27 +689,21 @@ fileprivate struct ActorImage: View {
     let media: any MediaProtocol
     let streamingService: any StreamingServiceProtocol
     let person: any MediaPersonProtocol
-    @State private var imageOpacity: Double = 0
-    
+
     var body: some View {
         ZStack {
-            if let blurHash = media.imageBlurHashes?.getBlurHash(for: .backdrop),
-               let blurImage = UIImage(blurHash: blurHash, size: .init(width: 30, height: 45)) {
-                Image(uiImage: blurImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .accessibilityHint("Temporary placeholder for missing image", isEnabled: false)
-            }
+            Color(white: 0.15)
             if let url = streamingService.getImageURL(imageType: .primary, mediaID: person.id, width: 0) {
                 AsyncImage(url: url) { image in
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     EmptyView()
                 }
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
@@ -718,8 +712,8 @@ fileprivate struct ArtView: View {
     let media: any Displayable
     let streamingService: any StreamingServiceProtocol
     
-    @State private var imageOpacity: Double = 0
-    
+    @State private var imageLoaded: Bool = false
+
     var body: some View {
         ZStack {
             if let blurHash = media.imageBlurHashes?.getBlurHash(for: .primary),
@@ -735,8 +729,9 @@ fileprivate struct ArtView: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .animation(.easeOut(duration: 0.5), value: imageOpacity)
-                        .onAppear { imageOpacity = 1 }
+                        .opacity(imageLoaded ? 1 : 0)
+                        .animation(StingrayAnimation.fadeIn, value: imageLoaded)
+                        .onAppear { imageLoaded = true }
                 } placeholder: {
                     EmptyView()
                 }
@@ -754,7 +749,7 @@ public struct PeopleBrowserView: View {
     public var body: some View {
         ScrollView(.horizontal) {
             HStack {
-                ForEach(media.people, id: \.id) { person in
+                ForEach(Array(media.people.enumerated()), id: \.element.id) { index, person in
                     Button { /* Temp Workaround */ } label: {
                         VStack {
                             ActorImage(media: media, streamingService: streamingService, person: person)
@@ -770,6 +765,7 @@ public struct PeopleBrowserView: View {
                     }
                     .buttonStyle(.plain)
                     .padding()
+                    .entranceAnimation(index: index)
                 }
             }
         }
@@ -797,7 +793,7 @@ public struct SpecialFeaturesView: View {
             case .unloaded:
                 Color.clear
                     .task {
-                        print("Attempting to get special features...")
+                        // Fetch special features
                         do { try await self.streamingService.getSpecialFeatures(for: self.media) }
                         catch {}
                     }
@@ -830,7 +826,7 @@ public struct SpecialFeaturesRow: View {
         self.streamingService = streamingService
         self.rowData = rowData
         self.media = media
-        self.title = rowData[0].featureType
+        self.title = rowData.first?.featureType ?? "Extras"
         self._navigation = navigation
     }
     
