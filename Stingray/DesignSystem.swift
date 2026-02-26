@@ -35,7 +35,7 @@ enum StingraySpacing {
 enum StingrayFont {
     static let heroTitle: Font = .largeTitle.bold()
     static let sectionTitle: Font = .title2.bold()
-    static let cardTitle: Font = .footnote.bold()
+    static let cardTitle: Font = .subheadline.bold()
     static let metadata: Font = .caption2
 }
 
