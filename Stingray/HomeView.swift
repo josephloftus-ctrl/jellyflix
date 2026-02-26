@@ -79,9 +79,7 @@ fileprivate struct DashboardRow: View {
             default:
                 Text(title)
                     .font(StingrayFont.sectionTitle)
-                    .padding(.horizontal, StingraySpacing.xs)
-                    .padding(.vertical, 6)
-                    .glassBackground(cornerRadius: 12, padding: 8)
+                    .padding(.horizontal, StingraySpacing.sm)
                     .task {
                         if let cachedMedia = cache[title] {
                             status = cachedMedia.isEmpty ? .empty : .complete(cachedMedia)
