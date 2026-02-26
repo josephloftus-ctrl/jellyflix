@@ -17,82 +17,46 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            VStack {
-                switch streamingService.libraryStatus {
-                case .waiting, .retrieving:
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(0..<3, id: \.self) { _ in
-                                VStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.12))
-                                        .frame(width: 160, height: 24)
-                                        .padding(.horizontal, StingraySpacing.sm)
-                                    ScrollView(.horizontal) {
-                                        HStack(spacing: StingraySpacing.md) {
-                                            ForEach(0..<5, id: \.self) { index in
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .fill(Color.white.opacity(Double(1 - Double(index) / 5.0) * 0.15))
-                                                    .frame(width: 240, height: 420)
-                                            }
-                                        }
-                                        .padding(.horizontal, StingraySpacing.sm)
-                                    }
-                                }
-                                .padding(.vertical)
-                            }
+            TabView(selection: $selectedTab) {
+                Tab(value: "home") {
+                    if let conduitClient {
+                        AIHomeView(
+                            conduitClient: conduitClient,
+                            streamingService: streamingService,
+                            navigation: $navigationPath
+                        )
+                    } else {
+                        ScrollView {
+                            HomeView(streamingService: streamingService, navigation: $navigationPath)
+                                .scrollClipDisabled()
                         }
                     }
-                case .error(let err):
-                    VStack {
-                        ErrorView(error: err, summary: "The server formatted the library's metadata unexpectedly.")
-                        SystemInfoView(streamingService: streamingService)
-                    }
-                case .available(let libraries), .complete(let libraries):
-                    TabView(selection: $selectedTab) {
-                        Tab(value: "users") {
-                            UserView(streamingService: streamingService, loggedIn: $loggedIn)
-                        } label: {
-                            Text(streamingService.usersName)
-                        }
+                } label: {
+                    Label("Home", systemImage: "house.fill")
+                }
 
-                        Tab(value: "search") {
-                            SearchView(streamingService: streamingService, navigation: $navigationPath)
-                        } label: {
-                            Text("Search")
-                        }
+                Tab(value: "live") {
+                    LiveView()
+                } label: {
+                    Label("Live", systemImage: "antenna.radiowaves.left.and.right")
+                }
 
-                        Tab(value: "home") {
-                            if let conduitClient {
-                                AIHomeView(
-                                    conduitClient: conduitClient,
-                                    streamingService: streamingService,
-                                    navigation: $navigationPath
-                                )
-                            } else {
-                                ScrollView {
-                                    HomeView(streamingService: streamingService, navigation: $navigationPath)
-                                        .scrollClipDisabled()
-                                }
-                            }
-                        } label: {
-                            Text("Home")
-                        }
+                Tab(value: "library") {
+                    AllLibrariesView(streamingService: streamingService, navigation: $navigationPath)
+                } label: {
+                    Label("Library", systemImage: "books.vertical.fill")
+                }
 
-                        Tab(value: "browse") {
-                            BrowseAllView(streamingService: streamingService, navigation: $navigationPath)
-                        } label: {
-                            Text("Browse")
-                        }
+                Tab(value: "search") {
+                    SearchView(streamingService: streamingService, navigation: $navigationPath)
+                } label: {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
 
-                        ForEach(libraries.indices, id: \.self) { index in
-                            Tab(value: libraries[index].id) {
-                                LibraryView(library: libraries[index], navigation: $navigationPath, streamingService: streamingService)
-                            } label: {
-                                Text(libraries[index].title)
-                            }
-                        }
-                    }
+                Tab(value: "profile") {
+                    UserView(streamingService: streamingService, loggedIn: $loggedIn)
+                } label: {
+                    Label(streamingService.usersName, systemImage: "person.fill")
                 }
             }
             .navigationDestination(for: DeepLinkRequest.self) { request in
@@ -117,8 +81,8 @@ struct DashboardView: View {
         }
         .onChange(of: deepLinkRequest) { _, newValue in
             guard let request = newValue else { return }
-            navigationPath.append(request) // Navigate to requested media
-            deepLinkRequest = nil // Clear the request
+            navigationPath.append(request)
+            deepLinkRequest = nil
         }
         .onChange(of: streamingService.userID, initial: true) {
             self.selectedTab = "home"
