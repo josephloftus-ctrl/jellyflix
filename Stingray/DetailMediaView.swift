@@ -523,6 +523,11 @@ fileprivate struct SeasonSelectorView: View {
                 break
             }
         }
+        .onAppear {
+            if lastFocusedSeasonID == nil {
+                lastFocusedSeasonID = seasons.first?.id
+            }
+        }
     }
 }
 
