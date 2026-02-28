@@ -24,8 +24,8 @@ jobs:
     - name: Show Xcode version
       run: xcodebuild -version
 
-    - name: Install tvOS platform
-      run: xcodebuild -downloadPlatform tvOS
+    - name: List available SDKs
+      run: xcodebuild -showsdks
 
     - name: Resolve Swift packages
       run: |
@@ -39,7 +39,7 @@ jobs:
           -project Stingray.xcodeproj \
           -scheme Stingray \
           -archivePath build/Jellyflix.xcarchive \
-          -destination 'generic/platform=tvOS' \
+          -sdk appletvos \
           -configuration Release \
           -skipPackagePluginValidation \
           CODE_SIGN_IDENTITY="" \
