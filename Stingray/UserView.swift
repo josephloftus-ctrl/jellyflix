@@ -14,7 +14,7 @@ public struct UserView: View {
     
     public var body: some View {
         CenterWrappedRowsLayout(itemWidth: 250, itemHeight: 325, horizontalSpacing: 100, verticalSpacing: 100) {
-            ForEach(users.getUsers()) { user in
+            ForEach(Array(users.getUsers().enumerated()), id: \.element.id) { index, user in
                 Button { switchUser(user: user) }
                 label: {
                     VStack(alignment: .center) {
@@ -41,10 +41,7 @@ public struct UserView: View {
                                         .scaledToFit()
                                         .foregroundStyle(
                                             LinearGradient(
-                                                colors: [
-                                                    Color(red: 0, green: 0.729, blue: 1),
-                                                    Color(red: 0, green: 0.09, blue: 0.945)
-                                                ],
+                                                colors: [StingrayColors.accent, StingrayColors.accentDark],
                                                 startPoint: .top,
                                                 endPoint: .bottom
                                             )
@@ -66,6 +63,7 @@ public struct UserView: View {
                     .padding(-16)
                 }
                 .buttonStyle(.plain)
+                .entranceAnimation(index: index)
                 .contextMenu {
                     Button("Logout", systemImage: "tv.slash.fill", role: .destructive) {
                         UserModel.shared.deleteUser(user.id)
@@ -99,9 +97,13 @@ public struct UserView: View {
     func switchUser(user: User) {
         // Check if the user we're switching to is the current user
         if user.id == self.streamingService.userID { return }
-        
+
         switch user.serviceType {
         case .Jellyfin(let jellyfinData):
+            var client: ConduitClient?
+            if let conduit = user.conduitURL {
+                client = ConduitClient(baseURL: conduit)
+            }
             self.loggedIn = .loggedIn(
                 JellyfinModel(
                     userDisplayName: user.displayName,
@@ -110,7 +112,8 @@ public struct UserView: View {
                     accessToken: jellyfinData.accessToken,
                     sessionID: jellyfinData.sessionID,
                     serviceURL: user.serviceURL
-                )
+                ),
+                conduitClient: client
             )
             self.users.setDefaultUser(userID: user.id)
         }

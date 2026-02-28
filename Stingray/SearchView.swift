@@ -9,11 +9,12 @@ import SwiftUI
 
 public struct SearchView: View {
     var streamingService: StreamingServiceProtocol
-    
+
     @State var searchText: String = ""
     @State var searchResults: SearchStatus = .empty
+    @State private var searchTask: Task<Void, Never>?
     @Binding var navigation: NavigationPath
-    
+
     public var body: some View {
         ScrollView {
             switch searchResults {
@@ -29,10 +30,19 @@ public struct SearchView: View {
         }
         .searchable(text: $searchText)
         .onChange(of: searchText) {
-            self.searchResults = search()
+            searchTask?.cancel()
+            searchTask = Task {
+                do {
+                    try await Task.sleep(for: .milliseconds(300))
+                } catch { return } // Cancelled — new keystroke arrived
+                let result = await performSearch()
+                if !Task.isCancelled {
+                    self.searchResults = result
+                }
+            }
         }
     }
-    
+
     /// Search results
     enum SearchStatus {
         /// Found search results
@@ -44,59 +54,63 @@ public struct SearchView: View {
         /// No search attempt has been made
         case empty
     }
-    
-    func search() -> SearchStatus {
-        if searchText.isEmpty { return .empty }
-        var scoredMedia: [MediaScore] = []
-        
-        switch streamingService.libraryStatus {
-        case .error:
-            return .notFound
-        case .waiting, .retrieving:
-            return .temporarilyNotFound
-        case .available(let libraries), .complete(let libraries):
-            let libraries = libraries.compactMap(\.media)
-            for library in libraries {
-                switch library {
-                case .available(let medias), .complete(let medias):
-                    scoredMedia += medias
-                        .map {
-                            var score: Int
-                            var sortTitle = $0.title
-                            if $0.title.lowercased().contains(searchText.lowercased()) { score = 0 }
-                            else { score = $0.title.slidingLevenshteinDistance(to: searchText) }
-                            if score != 0 { // If it's not already a perfect match, search the episodes if there are any
-                                switch $0.mediaType {
-                                case .tv(let seasons):
-                                    guard let seasons = seasons else { return MediaScore(media: $0, score: score, sortTitle: $0.title)}
-                                    for season in seasons {
-                                        for episode in season.episodes {
-                                            score = min(score, episode.title.slidingLevenshteinDistance(to: searchText))
-                                            sortTitle = episode.title
-                                            if score == 0 { break }// If it's not already a perfect match, search more episodes
+
+    func performSearch() async -> SearchStatus {
+        let query = searchText
+        if query.isEmpty { return .empty }
+
+        return await Task {
+            var scoredMedia: [MediaScore] = []
+
+            switch streamingService.libraryStatus {
+            case .error:
+                return .notFound
+            case .waiting, .retrieving:
+                return .temporarilyNotFound
+            case .available(let libraries), .complete(let libraries):
+                let libraries = libraries.compactMap(\.media)
+                for library in libraries {
+                    switch library {
+                    case .available(let medias), .complete(let medias):
+                        scoredMedia += medias
+                            .map {
+                                var score: Int
+                                var sortTitle = $0.title
+                                if $0.title.lowercased().contains(query.lowercased()) { score = 0 }
+                                else { score = $0.title.slidingLevenshteinDistance(to: query) }
+                                if score != 0 {
+                                    switch $0.mediaType {
+                                    case .tv(let seasons):
+                                        guard let seasons = seasons else { return MediaScore(media: $0, score: score, sortTitle: $0.title) }
+                                        for season in seasons {
+                                            for episode in season.episodes {
+                                                score = min(score, episode.title.slidingLevenshteinDistance(to: query))
+                                                sortTitle = episode.title
+                                                if score == 0 { break }
+                                            }
+                                            if score == 0 { break }
                                         }
-                                        if score == 0 { break } // If it's not already a perfect match, search more episodes
+                                    default: return MediaScore(media: $0, score: score, sortTitle: $0.title)
                                     }
-                                default: return MediaScore(media: $0, score: score, sortTitle: $0.title)
                                 }
+                                return MediaScore(media: $0, score: score, sortTitle: sortTitle)
                             }
-                            return MediaScore(media: $0, score: score, sortTitle: sortTitle)
-                        }
-                        .filter { $0.score <= 2 && $0.sortTitle.count >= searchText.count }
-                default: break
+                            .filter { $0.score <= 2 && $0.sortTitle.count >= query.count }
+                    default: break
+                    }
                 }
             }
-        }
-        
-        if scoredMedia.isEmpty {
-            return .notFound
-        }
-        
-        let finalMedia = scoredMedia
-            .sorted { $0.score < $1.score }
-            .map { $0.media }
-        
-        return .found(finalMedia)
+
+            if scoredMedia.isEmpty {
+                return .notFound
+            }
+
+            let finalMedia = scoredMedia
+                .sorted { $0.score < $1.score }
+                .map { $0.media }
+
+            return .found(finalMedia)
+        }.value
     }
 }
 
@@ -110,24 +124,24 @@ extension String {
         // Normalize both strings
         let selfLower = self.lowercased()
         let targetLower = structuredTarget.lowercased()
-        
+
         // Short circuit if they're identical
         if selfLower == targetLower { return 0 }
-        
+
         let targetChars = Array(targetLower)
         let sourceChars = Array(selfLower.prefix(targetChars.count))
         let length = min(sourceChars.count, targetChars.count)
-        
+
         // Short circuit if the search term is blank
         if length == 0 { return 0 }
-        
+
         // This Levenshtein Distance calculator is heavily optimized to only keep two rows of the matrix in memory at a time
         var previousRow = Array(0...length)
         var currentRow = Array(repeating: 0, count: length + 1)
-        
+
         for i in 1...length {
             currentRow[0] = i
-            
+
             for j in 1...length {
                 let cost = sourceChars[j - 1] == targetChars[i - 1] ? 0 : 1
                 currentRow[j] = Swift.min(
@@ -136,10 +150,10 @@ extension String {
                     previousRow[j - 1] + cost
                 )
             }
-            
+
             swap(&previousRow, &currentRow)
         }
-        
+
         return previousRow[length]
     }
 }

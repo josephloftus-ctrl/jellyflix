@@ -5,7 +5,10 @@
 //  Created by Ben Roberts on 12/11/25.
 //
 
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "network")
 
 /// A very basic network protocol for sending/receving requests, as well as formatting options
 public protocol BasicNetworkProtocol {
@@ -63,7 +66,7 @@ public final class JellyfinBasicNetwork: BasicNetworkProtocol {
             throw NetworkError.invalidURL("\(self.address.absoluteString) + \(path) + \(urlParams?.debugDescription ?? "No params")")
         }
         
-        print("Reaching out to \(url.absoluteString)")
+        logger.debug("Reaching out to \(url.absoluteString, privacy: .private)")
         
         // Setup request
         var request = URLRequest(url: url)

@@ -6,6 +6,9 @@
 //
 
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "storage")
 
 public enum StorageKeys: String {
     case defaultUserID = "defaultUserID"
@@ -75,11 +78,11 @@ final class DefaultsBasicStorage: BasicStorageProtocol {
     init() {
         // Use the shared container instead of standard defaults
         if let sharedDefaults = UserDefaults(suiteName: "group.com.benlab.stingray") {
-            print("Setting up user defaults with suite name")
+            logger.debug("Setting up user defaults with suite name")
             self.defaults = sharedDefaults
         } else {
             // Fallback to standard defaults if app group isn't configured
-            print("Setting up generic user defaults")
+            logger.debug("Setting up generic user defaults")
             self.defaults = UserDefaults.standard
         }
     }

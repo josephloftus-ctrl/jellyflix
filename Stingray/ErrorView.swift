@@ -15,15 +15,12 @@ public struct ErrorView: View {
     let summary: String
     /// Tracks whether or not the error has been expanded
     @State private var isExpanded: Bool = false
-    /// Tracks the current focus for changing colors
-    @FocusState private var isFocused: Bool
-    
+
     public var body: some View {
         Button { self.isExpanded = true }
-        label: { ErrorSummaryView(summary: summary, altColors: isFocused) }
+        label: { ErrorSummaryView(summary: summary) }
             .buttonStyle(.plain)
             .padding(.horizontal, 70)
-            .focused($isFocused, equals: true)
             .sheet(isPresented: $isExpanded) { ErrorExpandedView(errorDesc: error.rDescription) }
     }
 }
@@ -32,21 +29,21 @@ public struct ErrorView: View {
 fileprivate struct ErrorSummaryView: View {
     /// User-facing error to show before expanding
     let summary: String
-    /// Should switch into a high-contrast mode
-    let altColors: Bool
-    
+
     var body: some View {
-        Text(summary)
-            .foregroundStyle(altColors ? .black : .red)
-            .padding()
-            .background {
-                RoundedRectangle(cornerRadius: 20)
-                    .strokeBorder(altColors ? .clear : .red, lineWidth: 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(altColors ? .clear : .red.opacity(0.25))
-                    )
-            }
+        HStack(spacing: StingraySpacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title2)
+                .foregroundStyle(.yellow)
+            Text(summary)
+                .foregroundStyle(StingrayColors.textPrimary)
+        }
+        .padding()
+        .background {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(StingrayColors.errorTint)
+        }
+        .glassBackground(cornerRadius: 20, padding: 0)
     }
 }
 
@@ -54,10 +51,11 @@ fileprivate struct ErrorSummaryView: View {
 public struct ErrorExpandedView: View {
     /// Verbose error thrown by Stingray
     let errorDesc: () -> String
-    
+
     public var body: some View {
         VStack(alignment: .leading) {
             Text("Error:")
+                .font(StingrayFont.sectionTitle)
             Text(errorDesc())
         }
         .padding(.horizontal, 50)
@@ -66,11 +64,11 @@ public struct ErrorExpandedView: View {
 }
 
 #Preview {
-    ErrorSummaryView(summary: "Stingray went kaplooey.", altColors: false)
+    ErrorSummaryView(summary: "Stingray went kaplooey.")
 }
 
 #Preview {
-    ErrorSummaryView(summary: "Stingray went kaplooey.", altColors: false)
+    ErrorSummaryView(summary: "Stingray went kaplooey.")
         .sheet(isPresented: .constant(true)) {
             ErrorExpandedView(errorDesc: NetworkError.decodeJSONFailed(JSONError.missingKey("Nerd", "Preview"), url: nil).rDescription)
         }

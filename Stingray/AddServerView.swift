@@ -5,33 +5,38 @@
 //  Created by Ben Roberts on 11/12/25.
 //
 
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "login")
 
 struct AddServerView: View {
     @Binding var loggedIn: LoginState
-    @State private var httpProcol: HttpProtocol = .http
+    @State private var httpProtocol: HttpProtocol = .http
     @State private var httpHostname: String = ""
     @State private var httpPort: String = "8096"
     @State private var username: String = ""
     @State private var password: String = ""
+    @State private var conduitURL: String = "https://koji.josephloftus.com"
     @State private var error: RError?
     @State private var errorSummary: String = ""
     @State private var awaitingLogin: Bool = false
     
+    @State private var appeared = false
+
     var body: some View {
         VStack {
             Text("Sign into Jellyfin")
-                .font(.title)
-                .fontWeight(.bold)
+                .font(StingrayFont.heroTitle)
             Spacer()
             HStack {
-                Picker("Protocol", selection: $httpProcol) {
+                Picker("Protocol", selection: $httpProtocol) {
                     ForEach(HttpProtocol.allCases, id: \.self) { availableProtocol in
                         Text(availableProtocol.rawValue).tag(availableProtocol)
                     }
                 }
                 .pickerStyle(.menu)
-                switch httpProcol {
+                switch httpProtocol {
                 case .http:
                     TextField("Hostname", text: $httpHostname)
                     TextField("Port", text: $httpPort)
@@ -44,6 +49,7 @@ struct AddServerView: View {
                 TextField("Username", text: $username)
                 SecureField("Password", text: $password)
             }
+            TextField("Conduit URL (optional)", text: $conduitURL)
             if let error = self.error {
                 ErrorView(error: error, summary: self.errorSummary)
                     .padding(.vertical)
@@ -61,14 +67,23 @@ struct AddServerView: View {
             }
             .buttonStyle(.borderedProminent)
         }
+        .glassBackground(cornerRadius: 32, padding: StingraySpacing.lg)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 30)
+        .animation(StingrayAnimation.fadeIn, value: appeared)
         .onAppear {
-            print("Attempting to set up from storage")
+            appeared = true
+            logger.debug("Attempting to set up from storage")
             guard let defaultUser = UserModel.shared.getDefaultUser() else {
-                print("Failed to setup from storage, showing login screen")
+                logger.debug("Failed to setup from storage, showing login screen")
                 return
             }
             switch defaultUser.serviceType {
             case .Jellyfin(let userJellyfin):
+                var client: ConduitClient?
+                if let conduit = defaultUser.conduitURL {
+                    client = ConduitClient(baseURL: conduit)
+                }
                 loggedIn = .loggedIn(
                     JellyfinModel(
                         userDisplayName: defaultUser.displayName,
@@ -77,7 +92,8 @@ struct AddServerView: View {
                         accessToken: userJellyfin.accessToken,
                         sessionID: userJellyfin.sessionID,
                         serviceURL: defaultUser.serviceURL
-                    )
+                    ),
+                    conduitClient: client
                 )
             }
         }
@@ -86,7 +102,7 @@ struct AddServerView: View {
     func setupConnection() {
         // Setup URL
         var url: URL?
-        switch httpProcol {
+        switch httpProtocol {
         case .http:
             url = URL(string: "http://\(httpHostname):\(httpPort)")
         case .https:
@@ -94,7 +110,7 @@ struct AddServerView: View {
         }
         guard let url else {
             let netError: NetworkError
-            switch httpProcol {
+            switch httpProtocol {
             case .http:
                 netError = NetworkError.invalidURL("http://\(httpHostname):\(httpPort)")
                 self.error = netError
@@ -111,16 +127,21 @@ struct AddServerView: View {
         Task {
             awaitingLogin = true
             do {
-                let streamingService = try await JellyfinModel.login(url: url, username: username, password: password)
-                self.loggedIn = .loggedIn(streamingService)
+                let parsedConduitURL = conduitURL.isEmpty ? nil : URL(string: conduitURL)
+                let streamingService = try await JellyfinModel.login(url: url, username: username, password: password, conduitURL: parsedConduitURL)
+                var client: ConduitClient?
+                if let conduit = parsedConduitURL {
+                    client = ConduitClient(baseURL: conduit)
+                }
+                self.loggedIn = .loggedIn(streamingService, conduitClient: client)
             } catch let error as RError {
                 self.error = AccountErrors.loginFailed(error)
                 if let netErr = error.last() as? NetworkError {
-                    self.errorSummary = LoginView.overrideNetErrorMessage(netErr: netErr, httpProtocol: self.httpProcol)
-                    print("Error signing in: \(error.rDescription())")
+                    self.errorSummary = LoginView.overrideNetErrorMessage(netErr: netErr, httpProtocol: self.httpProtocol)
+                    logger.error("Error signing in: \(error.rDescription())")
                 } else {
                     self.errorSummary = "An unexpected error occurred. Please make sure your login details are correct."
-                    print("Other error: \(error)")
+                    logger.error("Login error: \(error)")
                 }
             }
             awaitingLogin = false

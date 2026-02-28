@@ -20,8 +20,7 @@ struct LoginView: View {
     var body: some View {
         VStack {
             Text("Sign into Jellyfin")
-                .font(.title)
-                .fontWeight(.bold)
+                .font(StingrayFont.heroTitle)
             Spacer()
             VStack {
                 TextField("Username", text: $username)
@@ -43,21 +42,23 @@ struct LoginView: View {
                 }
             }
             .frame(width: 400)
+            .glassBackground(cornerRadius: 32, padding: StingraySpacing.lg)
             Spacer()
         }
     }
     
     func setupUser() {
         switch loggedIn {
-        case .loggedIn(let streamingService):
+        case .loggedIn(let streamingService, let existingClient):
             Task {
                 do {
                     let streamingService = try await JellyfinModel.login(
                         url: streamingService.serviceURL,
                         username: username,
-                        password: password
+                        password: password,
+                        conduitURL: existingClient?.baseURL
                     )
-                    self.loggedIn = .loggedIn(streamingService)
+                    self.loggedIn = .loggedIn(streamingService, conduitClient: existingClient)
                     dismiss()
                 } catch let error as RError {
                     if let netErr = error.last() as? NetworkError {

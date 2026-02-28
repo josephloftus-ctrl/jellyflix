@@ -5,14 +5,17 @@
 //  Created by Ben Roberts on 11/12/25.
 //
 
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "navigation")
 
 /// Login phase of the application
 enum LoginState {
     /// All users are logged out
     case loggedOut
     /// There is at least one user signed in
-    case loggedIn(any StreamingServiceProtocol)
+    case loggedIn(any StreamingServiceProtocol, conduitClient: ConduitClient? = nil)
 }
 
 struct ContentView: View {
@@ -20,32 +23,42 @@ struct ContentView: View {
     @State var deepLinkRequest: DeepLinkRequest?
     
     var body: some View {
-        switch loginState {
-        case .loggedOut:
-            AddServerView(loggedIn: $loginState)
-                .padding(128)
-        case .loggedIn(let streamingService):
-            DashboardView(streamingService: streamingService, deepLinkRequest: $deepLinkRequest, loggedIn: $loginState)
-                .onOpenURL { url in
-                    handleDeepLink(url: url)
-                }
+        Group {
+            switch loginState {
+            case .loggedOut:
+                AddServerView(loggedIn: $loginState)
+                    .padding(128)
+                    .transition(.opacity)
+            case .loggedIn(let streamingService, let conduitClient):
+                DashboardView(streamingService: streamingService, conduitClient: conduitClient, deepLinkRequest: $deepLinkRequest, loggedIn: $loginState)
+                    .onOpenURL { url in
+                        handleDeepLink(url: url)
+                    }
+                    .transition(.opacity)
+            }
         }
+        .animation(StingrayAnimation.fadeIn, value: isLoggedIn)
+    }
+
+    private var isLoggedIn: Bool {
+        if case .loggedIn = loginState { return true }
+        return false
     }
     
     private func handleDeepLink(url: URL) {
-        print("Deep link received: \(url.absoluteString)")
+        logger.debug("Deep link received: \(url.absoluteString, privacy: .private)")
         
         // Make sure URL scheme is good
         guard url.scheme == "stingray",
               url.host == "media" else {
-            print("Invalid deep link scheme or host")
+            logger.warning("Invalid deep link scheme or host")
             return
         }
         
         // Parse query parameters
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
-            print("Failed to parse URL components")
+            logger.warning("Failed to parse URL components")
             return
         }
         
@@ -53,11 +66,11 @@ struct ContentView: View {
         let mediaID = queryItems.first(where: { $0.name == "id" })?.value
         let parentID = queryItems.first(where: { $0.name == "parentID" })?.value
         guard let mediaID = mediaID, let parentID = parentID else {
-            print("Missing required parameters: mediaID or parentID")
+            logger.warning("Missing required parameters: mediaID or parentID")
             return
         }
         
-        print("Parsed deep link - mediaID: \(mediaID), parentID: \(parentID)")
+        logger.debug("Parsed deep link - mediaID: \(mediaID, privacy: .private), parentID: \(parentID, privacy: .private)")
         
         // Create deep link request
         deepLinkRequest = DeepLinkRequest(mediaID: mediaID, parentID: parentID)

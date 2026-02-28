@@ -12,7 +12,7 @@ struct StingrayApp: App {
     init() {
         URLCache.shared = URLCache(
             memoryCapacity: 100 * 1024 * 1024, // 100 MB
-            diskCapacity: 1024 * 1024 * 1024 // 1 GB
+            diskCapacity: 500 * 1024 * 1024 // 500 MB
         )
     }
     
@@ -21,7 +21,7 @@ struct StingrayApp: App {
             ContentView()
                 .background {
                      LinearGradient(
-                        colors: [Color(red: 0, green: 0.145, blue: 0.223), Color(red: 0, green: 0.063, blue: 0.153)],
+                        colors: [StingrayColors.backgroundGradientTop, StingrayColors.backgroundGradientBottom],
                          startPoint: .top,
                          endPoint: .bottom
                      )

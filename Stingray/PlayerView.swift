@@ -6,7 +6,10 @@
 //
 
 import AVKit
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "player")
 
 struct PlayerView: View {
     @Environment(\.dismiss) var dismiss
@@ -14,7 +17,7 @@ struct PlayerView: View {
     @Binding var navigation: NavigationPath
     
     var body: some View {
-        VStack {
+        ZStack {
             if let player = self.vm.player {
                 AVPlayerViewControllerRepresentable(
                     id: self.vm.mediaSourceID,
@@ -34,10 +37,23 @@ struct PlayerView: View {
                     self.vm.stopPlayer()
                 }
             }
+            if self.vm.isRetrying {
+                VStack(spacing: StingraySpacing.sm) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("Reconnecting...")
+                        .font(StingrayFont.sectionTitle)
+                        .foregroundStyle(.white)
+                }
+                .padding(StingraySpacing.lg)
+                .glassBackground(cornerRadius: 20, padding: StingraySpacing.md)
+                .transition(.opacity)
+                .animation(StingrayAnimation.fadeIn, value: self.vm.isRetrying)
+            }
         }
         .onDisappear { // Only stop the player if PiP is not active
             if AVPlayerViewControllerRepresentable.Coordinator.activePiPCoordinator == nil {
-                print("Stopping player")
+                logger.debug("Stopping player")
                 self.vm.stopPlayer()
             }
         }
@@ -189,7 +205,7 @@ struct PlayerView: View {
                 // Previous episode
                 if index - 1 >= 0 {
                     let episode = allEpisodes[index - 1]
-                    items.insert(UIAction(title: "Next Episode", image: UIImage(systemName: "arrow.left"), handler: { _ in
+                    items.insert(UIAction(title: "Previous Episode", image: UIImage(systemName: "arrow.left"), handler: { _ in
                         self.vm.savePlaybackDate()
                         self.vm.mediaSourceID = episode.mediaSources.first?.id ?? self.vm.mediaSourceID
                         self.vm.newPlayer(episode: episode)
@@ -254,7 +270,7 @@ fileprivate struct PlayerDescriptionView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding()
-                .modifier(MaterialEffectModifier())
+                .glassBackground()
                 
                 switch media.mediaType {
                 case .movies, .unknown:
@@ -273,7 +289,7 @@ fileprivate struct PlayerDescriptionView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding()
-                        .modifier(MaterialEffectModifier())
+                        .glassBackground()
                     }
                 }
             }
@@ -289,28 +305,7 @@ fileprivate struct PlayerPeopleView: View {
         PeopleBrowserView(media: self.media, streamingService: self.streamingService)
             .padding()
             .padding(.horizontal, 24)
-            .modifier(MaterialEffectModifier())
-    }
-}
-
-fileprivate struct MaterialEffectModifier: ViewModifier {
-    let padding = 20.0
-    let radius = 24.0
-    
-    func body(content: Content) -> some View {
-        if #available(tvOS 26.0, *) {
-            content
-                .padding(padding)
-                .glassEffect(.regular, in: .rect(cornerRadius: radius))
-                .padding(-padding)
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-        } else {
-            content
-                .padding(padding)
-                .background(.ultraThinMaterial, in: .rect(cornerRadius: radius))
-                .padding(-padding)
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-        }
+            .glassBackground()
     }
 }
 
@@ -332,12 +327,12 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             id: id,
             onStartPiP: self.onStartPiP,
             onRestoreFromPiP: self.onRestoreFromPiP,
-            onStopFromPiP: self.onStopFromPiP,
+            onStopFromPiP: self.onStopFromPiP
         )
         
         // Should we kill the current PiP stream because the user is now watching something new?
         if Self.Coordinator.activePiPCoordinator?.id != nil && self.mediaSource.id != Self.Coordinator.activePiPCoordinator?.id {
-            print("Killing PiP Coordinator")
+            logger.debug("Killing PiP Coordinator")
             // Stop the previous player to kill PiP
             Self.Coordinator.activePiPCoordinator?.stopPlayer()
             Self.Coordinator.activePiPCoordinator = nil
@@ -402,7 +397,7 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             id: String,
             onStartPiP: @escaping () -> Void,
             onRestoreFromPiP: @escaping () -> Void,
-            onStopFromPiP: @escaping () -> Void,
+            onStopFromPiP: @escaping () -> Void
         ) {
             self.id = id
             self.onStartPiP = onStartPiP
@@ -417,13 +412,13 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
         }
         
         func playerViewControllerWillStartPictureInPicture(_ playerViewController: AVPlayerViewController) {
-            print("PiP starting")
+            logger.debug("PiP starting")
             self.onStartPiP()
             Self.activePiPCoordinator = self // Keep self alive
         }
         
         func playerViewControllerDidStopPictureInPicture(_ playerViewController: AVPlayerViewController) {
-            print("PiP stopped")
+            logger.debug("PiP stopped")
             if !isRestoringFromPiP {
                 onStopFromPiP()
             }
@@ -436,7 +431,7 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             _ playerViewController: AVPlayerViewController,
             failedToStartPictureInPictureWithError error: Error
         ) {
-            print("PiP failed to start: \(error)")
+            logger.error("PiP failed to start: \(error.localizedDescription)")
             Self.activePiPCoordinator = nil
         }
         
@@ -450,7 +445,7 @@ struct AVPlayerViewControllerRepresentable: UIViewControllerRepresentable {
             _ playerViewController: AVPlayerViewController,
             restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void
         ) {
-            print("Restoring UI from PiP")
+            logger.debug("Restoring UI from PiP")
             isRestoringFromPiP = true // Flag that this is a restore, not a close
             onRestoreFromPiP()
             completionHandler(true)

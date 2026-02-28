@@ -6,7 +6,10 @@
 //
 
 import AVKit
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "playerVM")
 
 @Observable
 final class PlayerViewModel: Hashable {
@@ -43,6 +46,15 @@ final class PlayerViewModel: Hashable {
     public var startTime: CMTime
     /// Current player progress (exposed for observation)
     public var playerProgress: PlayerProtocol?
+    /// Whether we're attempting a reconnect
+    public var isRetrying: Bool = false
+
+    /// Number of automatic retries attempted
+    @ObservationIgnored private var retryCount = 0
+    /// Max auto-retries before surfacing error
+    @ObservationIgnored private let maxRetries = 1
+    /// KVO observer for player item status
+    @ObservationIgnored private var statusObservation: NSKeyValueObservation?
     
     /// Server to stream from
     @ObservationIgnored public let streamingService: any StreamingServiceProtocol
@@ -125,7 +137,7 @@ final class PlayerViewModel: Hashable {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
         } catch {
-            print("Failed to configure audio session: \(error)")
+            logger.error("Failed to configure audio session: \(error.localizedDescription)")
         }
         
         var title = ""
@@ -162,10 +174,45 @@ final class PlayerViewModel: Hashable {
         )
         else { return }
         
+        // Buffer and bitrate configuration
+        if let playerItem = player.currentItem {
+            playerItem.preferredForwardBufferDuration = 30
+            if case .limited(let bps) = bitrate ?? self.playerProgress?.bitrate ?? .full {
+                playerItem.preferredPeakBitRate = Double(bps)
+            }
+        }
+
         self.player = player
         self.playerProgress = streamingService.playerProgress // Sync to view model
         self.player?.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
         self.player?.play()
+
+        // Observe player item status for error recovery
+        self.statusObservation = player.currentItem?.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            let errorDesc = item.error?.localizedDescription ?? "unknown"
+            logger.error("AVPlayerItem failed: \(errorDesc)")
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if self.retryCount < self.maxRetries {
+                    self.retryCount += 1
+                    logger.info("Auto-retrying playback (attempt \(self.retryCount))")
+                    self.isRetrying = true
+                    let currentTime = self.player?.currentTime() ?? startTime
+                    self.newPlayer(
+                        startTime: currentTime,
+                        videoID: self.playerProgress?.videoID,
+                        audioID: self.playerProgress?.audioID,
+                        subtitleID: self.playerProgress?.subtitleID,
+                        bitrate: self.playerProgress?.bitrate
+                    )
+                    try? await Task.sleep(for: .seconds(1))
+                    self.isRetrying = false
+                } else {
+                    logger.error("Max retries reached, playback failed")
+                }
+            }
+        }
         
         // Update user settings
         guard var currentUser = UserModel.shared.getDefaultUser() else { return }
@@ -195,6 +242,8 @@ final class PlayerViewModel: Hashable {
     }
     
     func stopPlayer() {
+        statusObservation?.invalidate()
+        statusObservation = nil
         player?.pause()
         player = nil
         self.playerProgress = nil
@@ -215,7 +264,7 @@ final class PlayerViewModel: Hashable {
                                 self.mediaSource.startPoint = 0
                             }
                             
-                            print(self.mediaSource.startPoint, self.mediaSource.duration * 0.1, self.mediaSource.duration * 0.9, )
+                            logger.debug("Start: \(self.mediaSource.startPoint), 10%: \(self.mediaSource.duration * 0.1), 90%: \(self.mediaSource.duration * 0.9)")
                         }
                     }
                 }

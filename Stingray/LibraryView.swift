@@ -9,13 +9,11 @@ import SwiftUI
 
 public struct LibraryView: View {
     @State var library: any LibraryProtocol
-    
+
     @Binding var navigation: NavigationPath
-    
+
     let streamingService: StreamingServiceProtocol
-    let cardWidth = CGFloat(200)
-    let cardSpacing = CGFloat(50)
-    
+
     public var body: some View {
         ScrollView {
             switch library.media {
@@ -27,11 +25,16 @@ public struct LibraryView: View {
                 if !allMedia.isEmpty {
                     MediaGridView(allMedia: allMedia, streamingService: streamingService, navigation: $navigation)
                 } else {
-                    VStack(alignment: .center) {
+                    VStack(alignment: .center, spacing: StingraySpacing.sm) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
                         Text("This library appears to be empty.")
-                        Text("Media type like collections, playlists, and music aren't yet supported.")
-                            .opacity(0.5)
+                        Text("Media types like collections, playlists, and music aren't yet supported.")
+                            .foregroundStyle(StingrayColors.textSecondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, StingraySpacing.xl)
                 }
             }
         }
@@ -39,19 +42,20 @@ public struct LibraryView: View {
 }
 
 public struct MediaGridView: View {
-    static let cardSpacing = 50.0
+    static let cardSpacing: CGFloat = 50.0
     let allMedia: [any MediaProtocol]
     let streamingService: any StreamingServiceProtocol
-    
+
     @Binding public var navigation: NavigationPath
-    
+
     public var body: some View {
         let columns = [
-            GridItem(.adaptive(minimum: MediaCard.cardSize.width, maximum: MediaCard.cardSize.height), spacing: Self.cardSpacing)
+            GridItem(.adaptive(minimum: StingrayCard.standard.width, maximum: StingrayCard.standard.height), spacing: Self.cardSpacing)
         ]
         LazyVGrid(columns: columns, spacing: Self.cardSpacing) {
-            ForEach(allMedia, id: \.id) { media in
+            ForEach(Array(allMedia.enumerated()), id: \.element.id) { index, media in
                 MediaCard(media: media, streamingService: streamingService) { navigation.append(AnyMedia(media: media)) }
+                    .entranceAnimation(index: index)
             }
         }
     }

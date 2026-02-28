@@ -6,6 +6,7 @@
 //
 
 import AVKit
+import os
 
 protocol StreamingServiceProtocol: StreamingServiceBasicProtocol {
     /// Denote the current fetching status of this library. If (partially) complete this holds library data, otherwise may hold an error.
@@ -93,6 +94,8 @@ public enum Bitrate {
     case limited(Int)
 }
 
+private let logger = Logger(subsystem: "com.benlab.stingray", category: "streaming")
+
 /// A harness for connecting to Jellyfin.
 @Observable
 public final class JellyfinModel: StreamingServiceProtocol {
@@ -178,7 +181,7 @@ public final class JellyfinModel: StreamingServiceProtocol {
     ///   - username: Signin username.
     ///   - password: Signin password.
     /// - Returns: The configured Jellyfin model.
-    static func login(url: URL, username: String, password: String) async throws(AccountErrors) -> JellyfinModel {
+    static func login(url: URL, username: String, password: String, conduitURL: URL? = nil) async throws(AccountErrors) -> JellyfinModel {
         let networkAPI = JellyfinAdvancedNetwork(network: JellyfinBasicNetwork(address: url))
         do {
             let response = try await networkAPI.login(username: username, password: password)
@@ -190,7 +193,8 @@ public final class JellyfinModel: StreamingServiceProtocol {
                     ),
                     serviceID: response.serverId,
                     id: response.userId,
-                    displayName: response.userName
+                    displayName: response.userName,
+                    conduitURL: conduitURL
                 )
             )
             UserModel.shared.setDefaultUser(userID: response.userId)
@@ -268,7 +272,9 @@ public final class JellyfinModel: StreamingServiceProtocol {
                     mediaTypes: [.movies([]), .tv(nil)]
                 )
             } catch {
-                library.media = .error(error)
+                await MainActor.run {
+                    library.media = .error(error)
+                }
                 return
             }
             
@@ -301,7 +307,7 @@ public final class JellyfinModel: StreamingServiceProtocol {
         do {
             return try await networkAPI.getUpNext(accessToken: accessToken)
         } catch {
-            print("Up next failed: \(error.rDescription())")
+            logger.error("Up next failed: \(error.rDescription())")
             return []
         }
     }
@@ -364,10 +370,10 @@ public final class JellyfinModel: StreamingServiceProtocol {
             media.loadSpecialFeatures(
                 specialFeatures: try await self.networkAPI.loadSpecialFeatures(mediaID: media.id, accessToken: self.accessToken)
             )
-            print("Loaded special features")
+            logger.debug("Loaded special features")
         }
         catch {
-            print("Failed to load special features")
+            logger.error("Failed to load special features")
             throw LibraryErrors.specialFeaturesFailed(error, media.title)
         }
     }
@@ -429,7 +435,7 @@ public final class JellyfinModel: StreamingServiceProtocol {
     static func getProfileImageURL(userID: String, serviceURL: URL) -> URL? {
         let networkAPI = JellyfinAdvancedNetwork(network: JellyfinBasicNetwork(address: serviceURL))
         let url = networkAPI.getUserImageURL(userID: userID)
-        print("Profile URL: \(url?.absoluteString ?? "No URL")")
+        logger.debug("Profile URL: \(url?.absoluteString ?? "No URL", privacy: .private)")
         return url
     }
 }
@@ -460,8 +466,8 @@ final class JellyfinPlayerProgress: PlayerProtocol {
     let player: AVPlayer
     /// Network to use for communicating to Jellyfin.
     private let network: any AdvancedNetworkProtocol
-    /// Track how often to page Jellyfin.
-    private var timer: Timer?
+    /// Async task for periodic progress updates.
+    private var progressTask: Task<Void, Never>?
     var mediaSource: any MediaSourceProtocol
     let videoID: String
     let bitrate: Bitrate
@@ -473,7 +479,7 @@ final class JellyfinPlayerProgress: PlayerProtocol {
     private let userSessionID: String
     /// API access token.
     private let accessToken: String
-    
+
     init(
         player: AVPlayer,
         network: any AdvancedNetworkProtocol,
@@ -493,11 +499,10 @@ final class JellyfinPlayerProgress: PlayerProtocol {
         self.bitrate = bitrate
         self.audioID = audioID
         self.subtitleID = subtitleID
-        self.timer = nil
         self.playbackSessionID = playbackSessionID
         self.userSessionID = userSessionID
         self.accessToken = accessToken
-        
+
         Task {
             do {
                 try await self.network.updatePlaybackStatus(
@@ -510,59 +515,84 @@ final class JellyfinPlayerProgress: PlayerProtocol {
                     playbackStatus: .play,
                     accessToken: self.accessToken
                 )
-            } catch { }
+            } catch {
+                logger.error("Failed to send initial playback status: \(error.localizedDescription)")
+            }
         }
     }
-    
+
     deinit {
-        self.timer?.invalidate()
-        self.timer = nil
+        self.progressTask?.cancel()
     }
-    
+
     func start() {
-        self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            Task {
+        self.progressTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
                 do {
-                    let playbackStatus: PlaybackStatus
-                    switch self.player.timeControlStatus {
-                    case .playing:
-                        playbackStatus = .progressed
-                    default:
-                        playbackStatus = .paused
+                    let (playbackStatus, position) = await MainActor.run {
+                        let status: PlaybackStatus = switch self.player.timeControlStatus {
+                        case .playing: .progressed
+                        default: .paused
+                        }
+                        let ticks = TimeInterval(self.player.currentTime().seconds).ticks
+                        return (status, ticks)
                     }
                     try await self.network.updatePlaybackStatus(
                         mediaSourceID: self.mediaSource.id,
                         audioStreamIndex: self.audioID,
                         subtitleStreamIndex: self.subtitleID,
-                        playbackPosition: TimeInterval(self.player.currentTime().seconds).ticks,
+                        playbackPosition: position,
                         playSessionID: self.playbackSessionID,
                         userSessionID: self.userSessionID,
                         playbackStatus: playbackStatus,
                         accessToken: self.accessToken
                     )
-                } catch { }
+                } catch {
+                    logger.warning("Failed to update playback progress: \(error.localizedDescription)")
+                }
+                try? await Task.sleep(for: .seconds(1))
             }
         }
     }
-    
+
     func stop() {
+        self.progressTask?.cancel()
         let playbackTicks = TimeInterval(self.player.currentTime().seconds).ticks
-        self.timer?.invalidate()
         self.mediaSource.startPoint = TimeInterval(ticks: playbackTicks)
+
+        // Capture values for the detached stop request with retry
+        let network = self.network
+        let mediaSourceID = self.mediaSource.id
+        let audioID = self.audioID
+        let subtitleID = self.subtitleID
+        let playbackSessionID = self.playbackSessionID
+        let userSessionID = self.userSessionID
+        let accessToken = self.accessToken
+
         Task {
-            do {
-                try await self.network.updatePlaybackStatus(
-                    mediaSourceID: self.mediaSource.id,
-                    audioStreamIndex: self.audioID,
-                    subtitleStreamIndex: self.subtitleID,
-                    playbackPosition: playbackTicks,
-                    playSessionID: self.playbackSessionID,
-                    userSessionID: self.userSessionID,
-                    playbackStatus: .stop,
-                    accessToken: self.accessToken
-                )
-            } catch { }
+            for attempt in 1...3 {
+                do {
+                    try await network.updatePlaybackStatus(
+                        mediaSourceID: mediaSourceID,
+                        audioStreamIndex: audioID,
+                        subtitleStreamIndex: subtitleID,
+                        playbackPosition: playbackTicks,
+                        playSessionID: playbackSessionID,
+                        userSessionID: userSessionID,
+                        playbackStatus: .stop,
+                        accessToken: accessToken
+                    )
+                    return
+                } catch {
+                    if attempt < 3 {
+                        logger.warning("Playback stop report failed (attempt \(attempt)/3), retrying...")
+                        try? await Task.sleep(for: .milliseconds(500 * attempt))
+                    } else {
+                        logger.error("Failed to report playback stop after 3 attempts: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
     }
 }

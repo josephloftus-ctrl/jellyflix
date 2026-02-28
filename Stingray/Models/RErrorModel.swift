@@ -201,19 +201,22 @@ public enum AdvancedNetworkErrors: RError {
     case failedUpNext(RError)
     /// Failed to get special features for a particular `MediaModelProtocol`.
     case failedSpecialFeatures(RError)
-    
+    /// Failed to look up items by ID.
+    case failedItemLookup(RError)
+
     public var next: (any RError)? {
         switch self {
-        case .failedRecentlyAdded(let err), .failedUpNext(let err), .failedSpecialFeatures(let err):
+        case .failedRecentlyAdded(let err), .failedUpNext(let err), .failedSpecialFeatures(let err), .failedItemLookup(let err):
             return err
         }
     }
-    
+
     public var errorDescription: String {
         switch self {
         case .failedRecentlyAdded: return "Failed to get recently added list"
         case .failedUpNext: return "Failed to get up next list"
         case .failedSpecialFeatures: return "Failed to get special features list"
+        case .failedItemLookup: return "Failed to look up items by ID"
         }
     }
 }

@@ -55,19 +55,45 @@ public final class UserStorage: UserStorageProtocol {
     }
     
     public func setUser(user: User) {
+        // Store sensitive tokens in Keychain
+        switch user.serviceType {
+        case .Jellyfin(let jellyfinData):
+            KeychainHelper.shared.save(jellyfinData.accessToken, forKey: "accessToken_\(user.id)")
+            KeychainHelper.shared.save(jellyfinData.sessionID, forKey: "sessionID_\(user.id)")
+        }
+
         if let encoded = try? JSONEncoder().encode(user),
            let jsonString = String(data: encoded, encoding: .utf8) {
             self.basicStorage.setString(.user, id: user.id, value: jsonString)
         }
     }
-    
+
     public func getUser(userID: String) -> User? {
         guard let jsonString = self.basicStorage.getString(.user, id: userID),
-              let data = jsonString.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode(User.self, from: data)
+              let data = jsonString.data(using: .utf8),
+              let user = try? JSONDecoder().decode(User.self, from: data) else { return nil }
+
+        // Prefer tokens from Keychain (secure) over UserDefaults (plaintext)
+        if let accessToken = KeychainHelper.shared.load(forKey: "accessToken_\(userID)"),
+           let sessionID = KeychainHelper.shared.load(forKey: "sessionID_\(userID)") {
+            var secureUser = User(
+                serviceURL: user.serviceURL,
+                serviceType: .Jellyfin(UserJellyfin(accessToken: accessToken, sessionID: sessionID)),
+                serviceID: user.serviceID,
+                id: user.id,
+                displayName: user.displayName,
+                usesSubtitles: user.usesSubtitles
+            )
+            secureUser.bitrate = user.bitrate
+            return secureUser
+        }
+
+        return user
     }
-    
+
     public func deleteUser(userID: String) {
         self.basicStorage.deleteString(.user, id: userID)
+        KeychainHelper.shared.delete(forKey: "accessToken_\(userID)")
+        KeychainHelper.shared.delete(forKey: "sessionID_\(userID)")
     }
 }
