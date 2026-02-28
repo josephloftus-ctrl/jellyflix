@@ -7,7 +7,7 @@
 
 import Foundation
 
-public final class StreamingServiceBasicModel: StreamingServiceBasicProtocol {
+public final class StreamingServiceBasicModel: StreamingServiceBasicProtocol, @unchecked Sendable {
     private var networkAPI: TopShelfNetworkProtocol
     private var accessToken: String
     
