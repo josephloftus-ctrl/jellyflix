@@ -24,6 +24,11 @@ jobs:
     - name: Show Xcode version
       run: xcodebuild -version
 
+    - name: Install tvOS platform support
+      run: |
+        sudo xcodebuild -downloadPlatform tvOS || true
+        xcodebuild -showsdks | grep -i tv
+
     - name: Resolve Swift packages
       run: |
         xcodebuild -resolvePackageDependencies \
