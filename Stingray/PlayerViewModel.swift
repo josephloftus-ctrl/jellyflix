@@ -275,7 +275,9 @@ final class PlayerViewModel: Hashable {
     }
     
     deinit {
-        player?.pause()
-        streamingService.playbackEnd()
+        MainActor.assumeIsolated {
+            player?.pause()
+            streamingService.playbackEnd()
+        }
     }
 }
