@@ -504,6 +504,8 @@ fileprivate struct SeasonSelectorView: View {
                     return season.id != lastFocusedSeasonID
                 case .season:
                     return false
+                case .ratings:
+                    return true
                 }
             }())
         }

@@ -11,6 +11,7 @@ import SwiftUI
 
 private let logger = Logger(subsystem: "com.benlab.stingray", category: "playerVM")
 
+@MainActor
 @Observable
 final class PlayerViewModel: Hashable {
     /// Player with formatted URL already set
