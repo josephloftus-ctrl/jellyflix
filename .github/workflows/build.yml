@@ -42,13 +42,13 @@ jobs:
           -destination 'generic/platform=tvOS' \
           -configuration Release \
           -skipPackagePluginValidation \
-          SWIFT_STRICT_CONCURRENCY=minimal \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           DEVELOPMENT_TEAM="" \
-          PROVISIONING_PROFILE_SPECIFIER="" \
-          2>&1 | tee build.log
+          PROVISIONING_PROFILE_SPECIFIER=""
+        BUILD_EXIT=$?
+        exit $BUILD_EXIT
 
     - name: Show build errors
       if: failure()
