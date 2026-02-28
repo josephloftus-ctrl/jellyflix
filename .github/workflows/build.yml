@@ -40,6 +40,7 @@ jobs:
           -scheme Stingray \
           -archivePath build/Jellyflix.xcarchive \
           -sdk appletvos \
+          -destination 'generic/platform=tvOS' \
           -configuration Release \
           -skipPackagePluginValidation \
           CODE_SIGN_IDENTITY="" \
