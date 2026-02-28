@@ -11,6 +11,7 @@ public final class StreamingServiceBasicModel: StreamingServiceBasicProtocol {
     private var networkAPI: TopShelfNetworkProtocol
     private var accessToken: String
     
+    @MainActor
     init() throws {
         guard let defaultUser = UserModel().getDefaultUser() else {
             throw InitError.noDefaultUser
