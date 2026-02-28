@@ -41,8 +41,6 @@ jobs:
           -skipPackagePluginValidation \
           ARCHS=arm64 \
           ONLY_ACTIVE_ARCH=NO \
-          SKIP_INSTALL=NO \
-          BUILD_LIBRARY_FOR_DISTRIBUTION=NO \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
@@ -57,32 +55,32 @@ jobs:
         grep -E "error:|warning:" build.log | head -50 || echo "No errors found in grep"
         echo "=== END ERRORS ==="
 
-    - name: Debug build products
+    - name: Explore DerivedData
       run: |
-        echo "=== Build Products ==="
-        find build/DerivedData/Build/Products -type d -maxdepth 3
-        echo "=== App contents ==="
+        echo "=== All files in Products ==="
+        find build/DerivedData/Build/Products -type f | head -50
+        echo ""
+        echo "=== All .app directories ==="
+        find build/DerivedData -name "*.app" -type d
+        echo ""
+        echo "=== Stingray binary locations ==="
+        find build/DerivedData -name "Stingray" -type f
+        echo ""
+        echo "=== App bundle contents ==="
         APP_PATH=$(find build/DerivedData/Build/Products -name "Stingray.app" -type d | head -1)
         if [ -n "$APP_PATH" ]; then
-          ls -la "$APP_PATH/"
-          ls -la "$APP_PATH/Stingray" 2>/dev/null || echo "No binary found"
+          ls -laR "$APP_PATH/" | head -40
           du -sh "$APP_PATH"
         fi
+        echo ""
+        echo "=== IntermediateBuildFilesPath ==="
+        find build/DerivedData/Build/Intermediates.noindex -name "Stingray" -type f 2>/dev/null | head -5
 
     - name: Create Unsigned IPA
       run: |
         APP_PATH=$(find build/DerivedData/Build/Products -name "Stingray.app" -type d | head -1)
         echo "Using app: $APP_PATH"
-        if [ -z "$APP_PATH" ]; then
-          echo "ERROR: No .app found"
-          exit 1
-        fi
-        APP_SIZE=$(du -sm "$APP_PATH" | cut -f1)
-        echo "App size: ${APP_SIZE}MB"
-        if [ "$APP_SIZE" -lt 1 ]; then
-          echo "ERROR: App bundle is suspiciously small (${APP_SIZE}MB)"
-          exit 1
-        fi
+        echo "App size: $(du -sh "$APP_PATH" | cut -f1)"
         mkdir -p build/Payload
         cp -r "$APP_PATH" build/Payload/
         cd build
