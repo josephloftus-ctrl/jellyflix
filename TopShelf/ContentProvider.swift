@@ -21,12 +21,10 @@ class ContentProvider: TVTopShelfContentProvider {
             return nil
         }
         
-        // Fetch content concurrently
+        // Fetch content
         logger.debug("Loading content...")
-        async let upNextMedia = streamingModel.retrieveUpNext()
-        async let recentlyAddedMedia = streamingModel.retrieveRecentlyAdded(.all)
-        
-        let (upNext, recentlyAdded) = await (upNextMedia, recentlyAddedMedia)
+        let upNext = await streamingModel.retrieveUpNext()
+        let recentlyAdded = await streamingModel.retrieveRecentlyAdded(.all)
         
         logger.debug("Retrieved \(upNext.count) up next items and \(recentlyAdded.count) recently added items")
         
