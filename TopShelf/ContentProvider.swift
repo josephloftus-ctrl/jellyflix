@@ -5,27 +5,30 @@
 //  Created by Ben Roberts on 12/11/25.
 //
 
+import os
 import TVServices
+
+private let logger = Logger(subsystem: "com.benlab.stingray.topshelf", category: "content")
 
 class ContentProvider: TVTopShelfContentProvider {
 
     override func loadTopShelfContent() async -> (any TVTopShelfContent)? {
         let streamingModel: StreamingServiceBasicProtocol
         do {
-            streamingModel = try StreamingServiceBasicModel()
+            streamingModel = try await MainActor.run { try StreamingServiceBasicModel() }
         } catch {
-            print("TopShelf: Failed to initialize StreamingServiceBasicModel: \(error)")
+            logger.error("Failed to initialize StreamingServiceBasicModel: \(error.localizedDescription)")
             return nil
         }
         
         // Fetch content concurrently
-        print("TopShelf: Loading content...")
+        logger.debug("Loading content...")
         async let upNextMedia = streamingModel.retrieveUpNext()
         async let recentlyAddedMedia = streamingModel.retrieveRecentlyAdded(.all)
         
         let (upNext, recentlyAdded) = await (upNextMedia, recentlyAddedMedia)
         
-        print("TopShelf: Retrieved \(upNext.count) up next items and \(recentlyAdded.count) recently added items")
+        logger.debug("Retrieved \(upNext.count) up next items and \(recentlyAdded.count) recently added items")
         
         // Create sections
         var sections: [TVTopShelfItemCollection<TVTopShelfSectionedItem>] = []
@@ -57,11 +60,11 @@ class ContentProvider: TVTopShelfContentProvider {
         }
         
         guard !sections.isEmpty else {
-            print("TopShelf: No sections to display")
+            logger.debug("No sections to display")
             return nil
         }
         
-        print("TopShelf: Returning \(sections.count) sections with content")
+        logger.debug("Returning \(sections.count) sections with content")
         let sectionedContent = TVTopShelfSectionedContent(sections: sections)
         return sectionedContent
     }

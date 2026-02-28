@@ -198,7 +198,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         id = container.decodeFieldSafely(
             String.self,
             forKey: .id,
-            default: UUID().uuidString,
+            defaultValue: UUID().uuidString,
             errBucket: &errBucket,
             errLabel: "Media Model"
         )
@@ -206,7 +206,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         title = container.decodeFieldSafely(
             String.self,
             forKey: .title,
-            default: "Unknown Title",
+            defaultValue: "Unknown Title",
             errBucket: &errBucket,
             errLabel: "Media Model"
         )
@@ -214,7 +214,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         let taglines = container.decodeFieldSafely(
             [String].self,
             forKey: .taglines,
-            default: [],
+            defaultValue: [],
             errBucket: &errBucket,
             errLabel: "Media Model"
         )
@@ -223,7 +223,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         description = container.decodeFieldSafely(
             String.self,
             forKey: .description,
-            default: "",
+            defaultValue: "",
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -232,7 +232,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         imageTags = container.decodeFieldSafely(
             MediaImages.self,
             forKey: .imageTags,
-            default: MediaImages(thumbnail: nil, logo: nil, primary: nil),
+            defaultValue: MediaImages(thumbnail: nil, logo: nil, primary: nil),
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -241,7 +241,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         imageBlurHashes = container.decodeFieldSafely(
             MediaImageBlurHashes?.self,
             forKey: .imageBlurHashes,
-            default: nil,
+            defaultValue: nil,
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -250,7 +250,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         genres = container.decodeFieldSafely(
             [String].self,
             forKey: .genres,
-            default: [],
+            defaultValue: [],
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -259,7 +259,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         maturity = container.decodeFieldSafely(
             String?.self,
             forKey: .maturity,
-            default: nil,
+            defaultValue: nil,
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -268,7 +268,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         let mediaType = container.decodeFieldSafely(
             MediaType.self,
             forKey: .mediaType,
-            default: .unknown,
+            defaultValue: .unknown,
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -278,7 +278,7 @@ public final class MediaModel: MediaProtocol, Decodable {
             let movieSources = container.decodeFieldSafely(
                 [MediaSource].self,
                 forKey: .mediaSources,
-                default: [],
+                defaultValue: [],
                 errBucket: &errBucket,
                 errLabel: "Media Model"
             )
@@ -296,7 +296,7 @@ public final class MediaModel: MediaProtocol, Decodable {
             let userDataContainer = container.decodeFieldSafely(
                 UserData.self,
                 forKey: .userData,
-                default: UserData(playbackPositionTicks: .zero, mediaItemID: UUID().uuidString),
+                defaultValue: UserData(playbackPositionTicks: .zero, mediaItemID: UUID().uuidString),
                 errBucket: &errBucket,
                 errLabel: "Media Model",
                 required: false
@@ -312,7 +312,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         let runtimeTicks = container.decodeFieldSafely(
             Int?.self,
             forKey: .duration,
-            default: nil,
+            defaultValue: nil,
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -323,7 +323,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         if let dateString = container.decodeFieldSafely(
             String?.self,
             forKey: .releaseDate,
-            default: nil,
+            defaultValue: nil,
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -336,7 +336,7 @@ public final class MediaModel: MediaProtocol, Decodable {
         people = container.decodeFieldSafely(
             [MediaPerson].self,
             forKey: .people,
-            default: [],
+            defaultValue: [],
             errBucket: &errBucket,
             errLabel: "Media Model",
             required: false
@@ -509,7 +509,7 @@ public final class MediaPerson: MediaPersonProtocol, Identifiable, Decodable {
             
             id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
             name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Anonymous"
-            role = try container.decodeIfPresent(String.self, forKey: .role) ?? "Unknown Roll"
+            role = try container.decodeIfPresent(String.self, forKey: .role) ?? "Unknown Role"
             imageHashes = try container.decodeIfPresent(MediaImageBlurHashes.self, forKey: .imageHashes)
         }
         catch DecodingError.keyNotFound(let key, _) { throw JSONError.missingKey(key.stringValue, "MediaPerson") }

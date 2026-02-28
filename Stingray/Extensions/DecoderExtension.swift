@@ -21,10 +21,10 @@ extension KeyedDecodingContainer {
     func decodeFieldSafely<T: Decodable>(
         _ type: T.Type,
         forKey key: Key,
-        default defaultValue: T,
+        defaultValue defaultValue: T,
         errBucket: inout [RError],
         errLabel: String,
-        required: Bool = true,
+        required: Bool = true
     ) -> T {
         do {
             return try decodeIfPresent(type, forKey: key) ?? {
