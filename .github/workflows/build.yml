@@ -33,15 +33,18 @@ jobs:
           -project Stingray.xcodeproj \
           -scheme Stingray
 
-    - name: Build Archive (Unsigned)
+    - name: Build for tvOS (Unsigned)
       run: |
-        xcodebuild archive \
+        xcodebuild build \
           -project Stingray.xcodeproj \
           -scheme Stingray \
-          -archivePath build/Jellyflix.xcarchive \
-          -destination 'generic/platform=tvOS' \
+          -sdk appletvos \
           -configuration Release \
+          -derivedDataPath build/DerivedData \
           -skipPackagePluginValidation \
+          ARCHS=arm64 \
+          ONLY_ACTIVE_ARCH=NO \
+          SKIP_INSTALL=NO \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
@@ -58,14 +61,15 @@ jobs:
 
     - name: Create Unsigned IPA
       run: |
-        APP_PATH=$(find build/Jellyflix.xcarchive -name "*.app" -not -name "TopShelf*" | head -1)
+        echo "=== App bundles ==="
+        find build/DerivedData -name "*.app" -type d
+        echo "=== Stingray binary ==="
+        find build/DerivedData -name "Stingray" -type f | head -5
+        APP_PATH=$(find build/DerivedData/Build/Products -name "Stingray.app" -type d | head -1)
         echo "Using app: $APP_PATH"
-        if [ -z "$APP_PATH" ]; then
-          echo "ERROR: No .app found in archive"
-          find build/Jellyflix.xcarchive -type d | head -20
-          exit 1
-        fi
-        du -sh "$APP_PATH"
+        echo "App size: $(du -sh "$APP_PATH" | cut -f1)"
+        echo "App contents:"
+        ls -la "$APP_PATH/"
         mkdir -p build/Payload
         cp -r "$APP_PATH" build/Payload/
         cd build
