@@ -13,7 +13,7 @@ private let logger = Logger(subsystem: "com.benlab.stingray", category: "login")
 struct AddServerView: View {
     @Binding var loggedIn: LoginState
     @State private var httpProtocol: HttpProtocol = .http
-    @State private var httpHostname: String = ""
+    @State private var httpHostname: String = "192.168.1.183"
     @State private var httpPort: String = "8096"
     @State private var username: String = ""
     @State private var password: String = ""
