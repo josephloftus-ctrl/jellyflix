@@ -54,8 +54,12 @@ jobs:
 
     - name: Create Unsigned IPA
       run: |
+        echo "=== Archive contents ==="
+        find build/Jellyflix.xcarchive/Products -name "*.app" -maxdepth 3
         mkdir -p build/Payload
-        cp -r build/Jellyflix.xcarchive/Products/Applications/Stingray.app build/Payload/
+        APP_PATH=$(find build/Jellyflix.xcarchive/Products -name "*.app" -maxdepth 3 | head -1)
+        echo "Using app: $APP_PATH"
+        cp -r "$APP_PATH" build/Payload/
         cd build
         zip -r Jellyflix-unsigned.ipa Payload
         rm -rf Payload
