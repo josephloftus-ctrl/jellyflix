@@ -25,7 +25,20 @@ jobs:
       run: xcodebuild -version
 
     - name: Install tvOS platform
-      run: sudo xcodebuild -downloadPlatform tvOS
+      run: |
+        # Try multiple times — runner state varies
+        sudo xcodebuild -runFirstLaunch 2>/dev/null || true
+        for i in 1 2 3; do
+          echo "Attempt $i to download tvOS platform..."
+          if sudo xcodebuild -downloadPlatform tvOS; then
+            echo "tvOS platform installed successfully"
+            break
+          fi
+          echo "Attempt $i failed, retrying in 5s..."
+          sleep 5
+        done
+        # Verify
+        xcodebuild -showsdks | grep -i tv || echo "WARNING: tvOS SDK not found"
 
     - name: Resolve Swift packages
       run: |
@@ -35,6 +48,7 @@ jobs:
 
     - name: Build Archive (Unsigned)
       run: |
+        set -o pipefail
         xcodebuild archive \
           -project Stingray.xcodeproj \
           -scheme Stingray \
@@ -46,15 +60,14 @@ jobs:
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           DEVELOPMENT_TEAM="" \
-          PROVISIONING_PROFILE_SPECIFIER=""
-        BUILD_EXIT=$?
-        exit $BUILD_EXIT
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          2>&1 | tee build.log
 
     - name: Show build errors
       if: failure()
       run: |
         echo "=== BUILD ERRORS ==="
-        grep -E "error:|warning:" build.log | head -50 || echo "No errors found in grep"
+        grep -E "error:" build.log | head -50 || echo "No errors found in log"
         echo "=== END ERRORS ==="
 
     - name: Create Unsigned IPA
