@@ -49,27 +49,28 @@ struct LoginView: View {
     
     func setupUser() {
         switch loggedIn {
-        case .loggedIn(let streamingService, let existingClient):
+        case .loggedIn(_, let existingClient, let existingSuri):
+            let url = KojiConfig.jellyfin
+            let conduitURL = KojiConfig.conduit
             Task {
                 do {
                     let streamingService = try await JellyfinModel.login(
-                        url: streamingService.serviceURL,
-                        username: username,
-                        password: password,
-                        conduitURL: existingClient?.baseURL
+                        url: url,
+                        username: KojiConfig.username,
+                        password: KojiConfig.password,
+                        conduitURL: conduitURL
                     )
-                    self.loggedIn = .loggedIn(streamingService, conduitClient: existingClient)
+                    self.loggedIn = .loggedIn(streamingService, conduitClient: existingClient, suriClient: existingSuri)
                     dismiss()
                 } catch let error as RError {
                     if let netErr = error.last() as? NetworkError {
-                        let scheme: HttpProtocol = streamingService.serviceURL.scheme == "https" ? .https : .http
-                        self.errorSummary = Self.overrideNetErrorMessage(netErr: netErr, httpProtocol: scheme)
+                        self.errorSummary = Self.overrideNetErrorMessage(netErr: netErr, httpProtocol: .http)
                         self.error = AccountErrors.loginFailed(error)
                     } else {
                         self.error = AccountErrors.loginFailed(nil)
                         self.errorSummary = "Failed to login. Please try again."
                     }
-                    
+
                     awaitingLogin = false
                 }
             }

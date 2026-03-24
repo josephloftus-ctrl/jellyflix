@@ -10,6 +10,7 @@ import SwiftUI
 struct DashboardView: View {
     var streamingService: StreamingServiceProtocol
     var conduitClient: ConduitClient?
+    var suriClient: SuriClient?
     @State private var selectedTab: String = "home"
     @State private var navigationPath = NavigationPath()
     @Binding var deepLinkRequest: DeepLinkRequest?
@@ -22,6 +23,7 @@ struct DashboardView: View {
                     if let conduitClient {
                         AIHomeView(
                             conduitClient: conduitClient,
+                            suriClient: suriClient,
                             streamingService: streamingService,
                             navigation: $navigationPath
                         )
@@ -33,6 +35,14 @@ struct DashboardView: View {
                     }
                 } label: {
                     Label("Home", systemImage: "house.fill")
+                }
+
+                if let suriClient {
+                    Tab(value: "downloads") {
+                        DownloadsView(suriClient: suriClient)
+                    } label: {
+                        Label("Downloads", systemImage: "arrow.down.circle.fill")
+                    }
                 }
 
                 Tab(value: "live") {
